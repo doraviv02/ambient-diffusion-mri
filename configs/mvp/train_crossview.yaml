@@ -1,0 +1,22 @@
+# Cross-view fine-tuning configuration (runbook Section 15).
+checkpoint_init: ${AMBIENT_R4_DIR}/network-snapshot.pkl
+checkpoint_options: ${AMBIENT_R4_DIR}/training_options.json
+dataset_mode: multiview_kspace
+contrast: T2
+num_views: 2
+batch_total: 4
+batch_gpu: 1
+learning_rate: 1.0e-5
+duration_mimg: 0.02
+fp16: true
+compile_network: false
+workers_per_process: 2
+cross_view_weight: 1.0
+input_heldout_weight: 0.1
+max_grad_norm: 1.0
+seed: 20260716
+validation_every_kimg: 2
+snapshot_every_kimg: 5
+tracking: disabled
+# GPUs 2,3 on this 4-GPU node (RTX 2080 Ti, 11 GB each).
+gpus: "2,3"

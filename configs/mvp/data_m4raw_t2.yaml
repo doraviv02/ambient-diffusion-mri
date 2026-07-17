@@ -1,0 +1,22 @@
+# M4Raw T2 multi-view preprocessing config (runbook Section 9.1).
+contrast: T2
+num_views: 2
+slice_policy: central_12          # keep the central 12 of 18 slices
+minimum_repetitions: 2
+phase_correction: true
+reject_motion: true
+max_translation_pixels: 0.5
+minimum_pair_correlation: 0.95   # applied to lightly-smoothed RSS (structural NCC)
+max_residual_phase_std: 0.6      # rad, over high-SNR brain voxels after global phase removal
+sensitivity_method: espirit
+sensitivity_fallback: rss_normalized_coil_images
+acs_width: 24                     # central k-space calibration width for ESPIRiT / phase
+pad_multiple: 32
+normalization: rss_percentile
+normalization_percentile: 99.5
+noise_estimator: repetition_difference_mad
+save_reference: true
+seed: 20260716
+# native M4Raw geometry (recorded, not assumed by the code)
+native_matrix: [256, 256]
+native_coils: 4

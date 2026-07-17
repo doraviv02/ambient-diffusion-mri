@@ -1,0 +1,24 @@
+{
+  "git_commit": "75feb2fad4b53e48791fcb0257f2e53a25340774",
+  "upstream_commit": "75feb2fad4b53e48791fcb0257f2e53a25340774",
+  "checkpoint_sha256": "46b0354507351acfde496c4e3961410845031b2d59bc7423e6f2a011440750ca",
+  "dataset_manifest_sha256": "82612fbed10fd4c4f652f0f09a8c6d9da25457b3883bbe8d13c82fd71580e20b",
+  "config": "configs/mvp/selected_inference.yaml",
+  "seeds": [
+    0
+  ],
+  "hostname": "3dgpubatch1",
+  "gpu_names": [
+    "NVIDIA GeForce RTX 2080 Ti",
+    "NVIDIA GeForce RTX 2080 Ti",
+    "NVIDIA GeForce RTX 2080 Ti",
+    "NVIDIA GeForce RTX 2080 Ti"
+  ],
+  "torch_version": "2.8.0+cu128",
+  "cuda_version": "12.8",
+  "timestamp": "2026-07-17T13:38:16.221903",
+  "status": "complete",
+  "component_manifests": [
+    "/home/doraviv/Lowfield_Ambient/runs/mv_ambient_mvp/ambient_r4_checkpoint.sha256"
+  ]
+}

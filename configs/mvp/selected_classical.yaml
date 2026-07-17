@@ -1,0 +1,10 @@
+lambda: 0.03
+iterations: 50
+grid:
+- 0.001
+- 0.003
+- 0.01
+- 0.03
+- 0.1
+- 0.3
+selection: val_heldout_kspace_error

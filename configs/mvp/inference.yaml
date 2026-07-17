@@ -1,0 +1,67 @@
+num_steps: 100
+l_ss: 10.0
+likelihood_type: DPS
+sigma_min: 0.004
+sigma_max: 10.0
+rho: 7
+S_churn: 0.0
+min_noise_variance: 1.0e-08
+seeds: '0'
+prior_training_R: 4
+prior_delta_prob: 5
+prior_acs_lines: 20
+checkpoints:
+  original: /home/doraviv/Lowfield_Ambient/models/ambient_diffusion_mri/ambient_models/ambient/R=4
+  finetuned: /home/doraviv/Lowfield_Ambient/runs/mv_ambient_mvp/checkpoints/crossview_t2/best
+methods:
+  M2:
+    checkpoint: original
+    condition: single_r4
+  M3:
+    checkpoint: original
+    condition: merge_fixed
+  M4:
+    checkpoint: original
+    condition: joint_fixed
+  M5:
+    checkpoint: finetuned
+    condition: joint_fixed
+  M6:
+    checkpoint: finetuned
+    condition: joint_extra
+  M7:
+    checkpoint: original
+    condition: merge_extra
+  M8:
+    checkpoint: original
+    condition: joint_extra
+  M9:
+    checkpoint: finetuned
+    condition: joint_quad
+  M10:
+    checkpoint: original
+    condition: joint_quad
+  M11:
+    checkpoint: original
+    condition: merge_quad
+  M12:
+    checkpoint: original
+    condition: single_full
+  M13:
+    checkpoint: finetuned
+    condition: joint_extra_comp
+  M14:
+    checkpoint: original
+    condition: joint_extra_comp
+  M15:
+    checkpoint: original
+    condition: merge_extra_comp
+  M16:
+    checkpoint: finetuned
+    condition: joint_quad_comp
+  M17:
+    checkpoint: original
+    condition: joint_quad_comp
+  M18:
+    checkpoint: original
+    condition: merge_quad_comp

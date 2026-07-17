@@ -44,7 +44,7 @@ def parse_int_list(s):
 @click.option('--data',          help='Path to the dataset', metavar='ZIP|DIR',                     type=str, required=True)
 @click.option('--cond',          help='Train class-conditional model', metavar='BOOL',              type=bool, default=False, show_default=True)
 @click.option('--arch',          help='Network architecture', metavar='ddpmpp|ncsnpp|adm',          type=click.Choice(['ddpmpp', 'ncsnpp', 'adm']), default='ddpmpp', show_default=True)
-@click.option('--precond',       help='Preconditioning & loss function', metavar='vp|ve|edm|ambient|ambient_mv',       type=click.Choice(['vp', 've', 'edm', 'ambient', 'ambient_mv']), default='ambient', show_default=True)
+@click.option('--precond',       help='Preconditioning & loss function', metavar='vp|ve|edm|ambient',       type=click.Choice(['vp', 've', 'edm', 'ambient']), default='ambient', show_default=True)
 
 # Hyperparameters.
 @click.option('--duration',      help='Training duration', metavar='MIMG',                          type=click.FloatRange(min=0), default=200, show_default=True)
@@ -75,17 +75,6 @@ def parse_int_list(s):
 @click.option('--gated', help='Whether to use gated convolutions', metavar='BOOL', default=True, show_default=True)
 @click.option('--corruption_pattern', help='Corruption pattern', metavar='dust|box|downscale|fixed_box', default='dust', show_default=True, required=False)
 @click.option('--max_size', help='Limit training samples.', type=int, default=None, show_default=True)
-
-# MVP: cross-view multi-acquisition fine-tuning options.
-@click.option('--dataset-mode', 'dataset_mode', help='Dataset class selection', metavar='image|numpy_ambient|multiview_kspace', type=click.Choice(['image', 'numpy_ambient', 'multiview_kspace']), default=None, show_default=True)
-@click.option('--cross-view-weight', 'cross_view_weight', help='Cross-view loss weight', type=float, default=1.0, show_default=True)
-@click.option('--input-heldout-weight', 'input_heldout_weight', help='Input held-out loss weight (beta)', type=float, default=0.1, show_default=True)
-@click.option('--min-noise-variance', 'min_noise_variance', help='Lower bound on k-space noise variance', type=float, default=1e-8, show_default=True)
-@click.option('--init-options', 'init_options', help='training_options.json of the checkpoint to recreate architecture from', type=str, default=None)
-@click.option('--compile_network', help='Enable torch.compile', metavar='BOOL', type=bool, default=False, show_default=True)
-@click.option('--tracking', help='Experiment tracking mode', metavar='disabled|wandb', type=click.Choice(['disabled', 'wandb']), default='wandb', show_default=True)
-@click.option('--val-data', 'val_data', help='Validation data dir for subject-level held-out validation', type=str, default=None)
-@click.option('--validation-every-kimg', 'validation_every_kimg', help='Run validation every N kimg', type=int, default=None)
 
 @click.option('--xflip',         help='Enable dataset x-flips', metavar='BOOL',                     type=bool, default=False, show_default=True)
 
@@ -120,10 +109,7 @@ def main(**kwargs):
         os.environ["CUDA_VISIBLE_DEVICES"] = str(opts.gpu)
     dist.init()
 
-    tracking_disabled = (opts.tracking == 'disabled')
-    if tracking_disabled:
-        os.environ['WANDB_MODE'] = 'disabled'
-    if dist.get_rank() == 0 and not tracking_disabled:
+    if dist.get_rank() == 0:
         wandb.init(
             project="ambient_diffusion",
             config=kwargs,
@@ -134,22 +120,12 @@ def main(**kwargs):
     # Initialize config dict.
     c = dnnlib.EasyDict()
     c.update(max_grad_norm=opts.max_grad_norm)
-
-    # Dataset selection: explicit --dataset-mode (do NOT infer from the path).
-    dataset_mode = opts.dataset_mode
-    if dataset_mode is None:  # backward-compatible default
-        dataset_mode = 'numpy_ambient' if "numpy" in opts.data else 'image'
-    if dataset_mode == 'multiview_kspace':
-        c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.MultiViewKspaceDataset',
-                                           path=opts.data, acs_lines=16, base_R=int(opts.corruption_probability) or 4,
-                                           delta_fraction=0.3, min_noise_variance=opts.min_noise_variance,
-                                           cache=opts.cache, seed=(opts.seed or 0), use_labels=False)
-    elif dataset_mode == 'numpy_ambient':
-        c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.NumpyFolderDataset', path=opts.data, use_labels=opts.cond, xflip=opts.xflip, cache=opts.cache,
+    if "numpy" in opts.data:
+        c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.NumpyFolderDataset', path=opts.data, use_labels=opts.cond, xflip=opts.xflip, cache=opts.cache, 
                                        corruption_probability=opts.corruption_probability, delta_probability=opts.delta_probability, mask_full_rgb=opts.mask_full_rgb,
                                        corruption_pattern=opts.corruption_pattern, normalize=opts.normalize, precond=opts.precond)
     else:
-        c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=opts.data, use_labels=opts.cond, xflip=opts.xflip, cache=opts.cache,
+        c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=opts.data, use_labels=opts.cond, xflip=opts.xflip, cache=opts.cache, 
                                        corruption_probability=opts.corruption_probability, delta_probability=opts.delta_probability, mask_full_rgb=opts.mask_full_rgb,
                                        corruption_pattern=opts.corruption_pattern, normalize=opts.normalize)
     c.data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, num_workers=opts.workers, prefetch_factor=2)
@@ -201,13 +177,6 @@ def main(**kwargs):
         c.network_kwargs.class_name = 'training.networks.EDMPrecond'
         c.loss_kwargs.class_name = 'training.loss.AmbientLoss'
         c.loss_kwargs.norm = opts.norm
-    elif opts.precond == 'ambient_mv':
-        # Same EDMPrecond network (four-channel), cross-view measurement loss.
-        c.network_kwargs.class_name = 'training.networks.EDMPrecond'
-        c.loss_kwargs.class_name = 'training.loss.CrossViewAmbientLoss'
-        c.loss_kwargs.cross_view_weight = opts.cross_view_weight
-        c.loss_kwargs.input_heldout_weight = opts.input_heldout_weight
-        c.loss_kwargs.min_noise_variance = opts.min_noise_variance
     elif opts.precond == 'ambient_vp':
         c.network_kwargs.class_name = 'training.networks.VPPrecond'
         c.loss_kwargs.class_name = 'training.loss.AmbientVPLoss'
@@ -224,28 +193,7 @@ def main(**kwargs):
         c.augment_kwargs = dnnlib.EasyDict(class_name='training.augment.AugmentPipe', p=opts.augment)
         c.augment_kwargs.update(xflip=1e8, yflip=1, scale=1, rotate_frac=1, aniso=1, translate_frac=1)
         c.network_kwargs.augment_dim = 9
-
-    # Recreate architecture-critical options from the published checkpoint's
-    # training_options.json (do NOT rely on train.py defaults, project doc S4).
-    c.img_channels_override = None
-    c.img_resolution_override = None
-    if opts.init_options is not None:
-        with dnnlib.util.open_url(opts.init_options) as f:
-            ckpt_opts = json.load(f)
-        ck_net = dict(ckpt_opts['network_kwargs'])
-        ck_net['class_name'] = c.network_kwargs.get('class_name', ck_net.get('class_name'))
-        c.network_kwargs = dnnlib.EasyDict(ck_net)
-        c.img_resolution_override = int(ckpt_opts['dataset_kwargs']['resolution'])
-        c.img_channels_override = 4 if opts.precond in ('ambient', 'ambient_mv') else 2
     c.network_kwargs.update(dropout=opts.dropout, use_fp16=opts.fp16)
-
-    # MVP training-loop controls.
-    c.dataset_mode = dataset_mode
-    c.compile_network = bool(opts.compile_network)
-    c.tracking = opts.tracking
-    c.transfer_strict = (opts.precond in ('ambient', 'ambient_mv'))
-    c.val_data = opts.val_data
-    c.validation_every_kimg = opts.validation_every_kimg
 
     # Training options.
     c.total_kimg = max(int(opts.duration * 1000), 1)

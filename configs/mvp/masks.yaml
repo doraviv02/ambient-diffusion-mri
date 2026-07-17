@@ -1,0 +1,10 @@
+# Deterministic experiment-mask design (runbook Section 10).
+seed: 20260716
+acceleration_single: 4          # single_r4 / joint_extra per-view acceleration
+acceleration_fixed_each: 8      # merge_fixed / joint_fixed per-view acceleration
+acs_lines: 16                   # central fully-sampled phase-encode columns (ACS)
+undersample_axis: columns       # last dim; matches repo create_masks + pretrained model
+variable_density: false         # uniform outer sampling to match the pretrained mask distribution
+# Fixed-budget check: single_r4 acquires W/4 columns; the two R=8 complementary
+# masks together (counting duplicated ACS twice) must equal that within 1%.
+budget_tolerance: 0.01
