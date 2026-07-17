@@ -278,8 +278,12 @@ def main():
                  "statistical tie** (CI [-0.004, +0.005]). M16 is as accurate as the full scan in "
                  "the L2 sense and loses only on *structural* similarity — the signature of a prior "
                  "adding plausible-but-wrong texture, not of missing information. That makes the "
-                 "residual gap a *reconstruction* deficit, not an acquisition one, and per-condition "
-                 "l_ss tuning is the obvious way to close it.\n")
+                 "residual gap a *reconstruction* deficit, not an acquisition one. We suspected the "
+                 "fix was to re-tune the guidance scale `l_ss` (tuned once on sparse data) per "
+                 "coverage tier, and **tested it: it does not help** — `l_ss=30` is optimal at every "
+                 "tier, and raising it on well-sampled data makes SSIM *worse* (see "
+                 "`figures/mvp/lss_tier_tuning.png` and the limitations section). The gap is intrinsic "
+                 "to soft-guidance diffusion sampling vs a direct solve, not a tuning artefact.\n")
         L.append("With the **duplicated** 4x design the same question answered *no* by a wide margin "
                  "(M9 0.703 vs MF 0.796, -0.093). The acquisition fix (M16 - M9 = +0.061 on 100% of "
                  "subjects) closes two thirds of that gap. This is the single largest effect measured "
@@ -358,9 +362,11 @@ def main():
             ("fixed_vs_extra_budget_quad.png", "metric vs acquired coefficients, 4-view set"),
         ]),
         ("Uncertainty and tuning", [
+            ("lss_tier_tuning.png", "per-coverage-tier l_ss retune on validation -- l_ss=30 is "
+                                    "optimal at every tier, so the M12<MF gap is not a tuning artefact"),
             ("uncertainty_examples.png", "per-pixel posterior std over seeds"),
             ("uncertainty_calibration.png", "|error| vs predicted std"),
-            ("validation_grid.png", "l_ss / num_steps / likelihood tuning on validation"),
+            ("validation_grid.png", "original global l_ss / num_steps / likelihood tuning on validation"),
         ]),
     ]
     for gname, items in groups:
@@ -380,17 +386,21 @@ def main():
     L.append("- **Cross-view fine-tuning is worth ~0 above 40% coverage** and only ~+0.01 in the "
              "sparse regime. It is also a short (0.02 Mimg) empirical self-supervised adaptation and "
              "does **not** inherit the Ambient Diffusion identifiability theorem.")
-    L.append("- **The diffusion prior hurts on well-sampled data** (M12 < MF on 90% of subjects). "
-             "A generative prior plus guidance only adds error once the data determines the image.")
+    L.append("- **The diffusion prior hurts on well-sampled data** (M12 < MF on 90% of subjects), "
+             "and this is **not** a guidance-tuning artefact. We re-tuned `l_ss` per coverage tier "
+             "on validation (held-out k-space error, test untouched): `l_ss=30` is optimal at every "
+             "tier, and raising it on the dense tier *lowers* SSIM (0.642 -> 0.513 by l_ss=300) "
+             "because larger DPS steps overshoot and inject noise. The gap is intrinsic to "
+             "soft-guidance diffusion sampling vs a direct least-squares solve; closing it needs a "
+             "different sampler (hard data-consistency projection), not a scalar knob. See "
+             "`figures/mvp/lss_tier_tuning.png`.")
     L.append("- **Joint-vs-merged is confounded by a guidance-scale factor.** The runbook's "
              "normalized fidelity averages over views, so `D_merged = V * D_joint` (measured: 1.989 "
              "at V=2, 3.967 at V=4). Since the sampler applies `grad(D)/sqrt(D)`, the merged "
              "condition gets **sqrt(V)x stronger guidance at the same l_ss**. A clean test needs "
-             "per-condition l_ss tuning, or dropping the 1/V. The equivalence unit tests remain "
-             "correct — they compare raw weighted-SSE gradients, which do match; it is the "
-             "sampler-side normalization that differs.")
-    L.append("- **l_ss was tuned once, on single_r4**, and reused for every V and R. This is the "
-             "prime suspect for the residual M16 < MF gap and is the highest-value next experiment.")
+             "dropping the 1/V (the l_ss retune above shows a global scale shift does not resolve "
+             "it). The equivalence unit tests remain correct — they compare raw weighted-SSE "
+             "gradients, which do match; it is the sampler-side normalization that differs.")
     L.append("- **Test reference is an average of all 6 repetitions, including the 2-4 used as "
              "input** (~1/3 of the average), a mild uniform optimistic bias affecting all methods "
              "equally. Comparisons are unaffected; absolute SSIM is slightly generous.")

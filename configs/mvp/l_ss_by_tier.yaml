@@ -1,0 +1,9 @@
+l_ss_by_tier:
+  sparse: 30.0
+  mid: 30.0
+  dense: 30.0
+likelihood_type: DPS
+num_steps: 100
+note: 'Per-tier l_ss tuned on validation (6 subj), held-out k-space error primary;
+  dense via 80%-holdout proxy. RESULT: l_ss=30 optimal at every tier -- no change
+  from the global value. Test never touched. See reports/mvp_notes.md sec 7.'

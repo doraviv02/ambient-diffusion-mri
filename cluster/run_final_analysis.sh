@@ -43,6 +43,11 @@ python analysis/plot_data_consistency.py --results-root "$FINAL" \
   --output figures/mvp/data_consistency_curves.png
 python analysis/plot_uncertainty.py --results-root "$UNC" --output-dir figures/mvp
 
+# per-tier l_ss retune (validation only; regenerates figures/mvp/lss_tier_tuning.png
+# and tables/mvp/lss_tier_grid.csv). Result: l_ss=30 optimal at every tier.
+python tools/tune_lss_by_tier.py --config configs/mvp/selected_inference.yaml \
+  --manifest "$MASKS/val_manifest.csv" --n-subjects 6 || echo "(l_ss tier tune skipped)"
+
 echo "=== report + manifest ==="
 python analysis/build_mvp_report.py --summary tables/mvp/summary_metrics.csv --figures figures/mvp \
   --per-subject tables/mvp/metrics_per_subject.csv \

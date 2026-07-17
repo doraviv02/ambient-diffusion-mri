@@ -253,8 +253,9 @@ The M16-vs-MF metric split is the informative one:
 So M16 is as accurate as a full scan in the L2 sense and loses only on *structural*
 similarity. That is the signature of a prior painting plausible-but-wrong texture,
 not of missing information — i.e. **M16-MF is a reconstruction deficit, not an
-acquisition one**. `l_ss=30` was tuned on single_r4 and never re-tuned for V=4 or
-R=1; per-condition tuning is the prime suspect for closing that gap.
+acquisition one**. We suspected `l_ss=30` (tuned once on single_r4) was too weak for
+well-sampled data and that per-tier tuning would close the gap. **We tested this and
+it is false — see §7.**
 (An earlier draft of this file mis-attributed the NRMSE tie to M12; M12's NRMSE is
 0.135, clearly *worse* than M16's 0.120. The tie is with MF.)
 
@@ -313,10 +314,43 @@ apply the same principle at the extra-repetition budgets.
 
 ---
 
-# 6. Open threads (not run)
-1. **Re-tune `l_ss` per condition.** It was tuned once at V=1/R=4 and reused
-   everywhere. This is the only thing keeping M16 below MF, and it also confounds
-   every joint-vs-merged comparison (§3). Highest-value next experiment.
-2. **Drop the 1/V normalization** in the multi-view fidelity — it verifiably dilutes
-   the statistically-correct likelihood by a factor V.
+# 7. Per-tier l_ss retune (RESULT: negative — l_ss=30 optimal at every tier)
+We suspected the single global `l_ss=30` (tuned on sparse single_r4) was
+mis-calibrated for the well-sampled conditions and was the cause of the M12<MF /
+M16<MF SSIM gap. Tested it: tuned `l_ss` **per coverage tier** on validation
+(6 subjects, test never touched), held-out k-space error primary, exactly the
+original criterion. Representatives: sparse = single_r4 (25%), mid =
+joint_extra_comp (44%), dense = a synthetic 80%-holdout single-view mask
+(held-out error is undefined at 100% sampling, so we proxy the dense regime at
+joint_quad_comp's 81% coverage and score the withheld 20%).
+(`tools/tune_lss_by_tier.py`, grid `tables/mvp/lss_tier_grid.csv`, figure
+`figures/mvp/lss_tier_tuning.png`.)
+
+| tier | l_ss=3 | 10 | 30 | 100 | 300 | selected |
+|---|---|---|---|---|---|---|
+| sparse (≤25%) SSIM | 0.153 | 0.545 | **0.582** | 0.556 | — | **30** |
+| mid (44%) SSIM     | 0.155 | 0.610 | **0.637** | 0.603 | — | **30** |
+| dense (≥80%) SSIM  | 0.118 | 0.441 | **0.642** | 0.632 | 0.513 | **30** |
+
+**Every tier peaks at l_ss=30**, held-out error and SSIM agreeing. Crucially the
+dense tier *falls* above 30 (SSIM 0.642→0.513 by l_ss=300): in this DPS sampler a
+larger `l_ss` is not "trust the data more" — it takes larger guidance steps that
+overshoot and inject noise, so raising it on well-sampled data **hurts**.
+**Consequences:**
+- The M12<MF and M16<MF gaps are **not** a guidance-tuning artefact. At the best
+  available `l_ss`, diffusion sampling still tops out below a direct least-squares
+  solve on well-sampled data. The gap is intrinsic to generative-prior + guidance
+  vs a direct solve when the data already determines the image — not something a
+  scalar knob fixes. (Would need a different sampler, e.g. hard data-consistency
+  projection at low sigma, or annealing `l_ss`→∞ as sigma→0.)
+- No test result changes: the applied config (`configs/mvp/l_ss_by_tier.yaml`)
+  selects 30 for all tiers, identical to what every method already ran. The solver
+  now *supports* per-tier l_ss (`cfg["l_ss_by_tier"]`), it just resolves to 30.
+
+# 8. Open threads (not run)
+1. **Drop the 1/V normalization** in the multi-view fidelity — it verifiably dilutes
+   the statistically-correct likelihood by a factor V, and confounds joint-vs-merge (§3).
+2. **A hard data-consistency sampler** (project measured coefficients at low sigma
+   instead of soft DPS guidance) — the principled fix for the dense-regime gap that
+   §7 shows l_ss cannot close.
 3. Ultra-low-field (<0.1 T) validation. Nothing here is claimed below 0.3 T.

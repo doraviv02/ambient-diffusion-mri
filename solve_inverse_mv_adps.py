@@ -91,6 +91,16 @@ _MASK_SOURCE = {
     "joint_quad_comp": "joint_quad_comp",
     "merge_quad_comp": "joint_quad_comp",
 }
+# Condition -> unique-column coverage (measured; see analysis/experiments.py).
+# Used only to resolve per-tier l_ss when cfg carries `l_ss_by_tier`.
+_CONDITION_COVERAGE = {
+    "single_r4": 0.25, "merge_fixed": 0.188, "joint_fixed": 0.188,
+    "joint_extra": 0.25, "merge_extra": 0.25, "joint_quad": 0.25, "merge_quad": 0.25,
+    "joint_extra_comp": 0.438, "merge_extra_comp": 0.438,
+    "joint_quad_comp": 0.812, "merge_quad_comp": 0.812,
+    "single_full": 1.0,
+}
+
 _MERGE_CONDITIONS = ("merge_fixed", "merge_extra", "merge_quad",
                      "merge_extra_comp", "merge_quad_comp")
 
@@ -283,7 +293,27 @@ def main():
     else:
         method_names = ["custom"]
 
-    # resolve each method to (checkpoint_dir, condition)
+    # per-coverage-tier l_ss (optional). If cfg carries `l_ss_by_tier`, a method's
+    # guidance scale is resolved from its condition's coverage tier; otherwise the
+    # single global l_ss is used for every method (original behaviour). An explicit
+    # per-method `l_ss` in the config always wins. Tuned on validation only --
+    # see tools/tune_lss_by_tier.py and reports/mvp_notes.md.
+    l_ss_by_tier = cfg.get("l_ss_by_tier") or {}
+
+    def tier_of(cond):
+        cov = _CONDITION_COVERAGE.get(cond, 0.25)
+        if cov <= 0.25:
+            return "sparse"
+        return "mid" if cov <= 0.60 else "dense"
+
+    def resolve_l_ss(mdef, cond):
+        if mdef.get("l_ss") is not None:
+            return float(mdef["l_ss"])
+        if l_ss_by_tier:
+            return float(l_ss_by_tier.get(tier_of(cond), l_ss))
+        return l_ss
+
+    # resolve each method to (checkpoint_dir, condition, l_ss)
     resolved = {}
     net_cache = {}
     for mname in method_names:
@@ -292,7 +322,7 @@ def main():
         cond = args.condition or mdef.get("condition")
         if ckpt is None or cond is None:
             raise ValueError(f"method {mname}: need checkpoint and condition (got {ckpt}, {cond})")
-        resolved[mname] = (ckpt, cond)
+        resolved[mname] = (ckpt, cond, resolve_l_ss(mdef, cond))
         if ckpt not in net_cache:
             net_cache[ckpt] = load_network(ckpt, device)
 
@@ -322,7 +352,7 @@ def main():
         H, W = sample["ksp_views"].shape[-2:]
 
         for mname in method_names:
-            ckpt, cond = resolved[mname]
+            ckpt, cond, l_ss_m = resolved[mname]
             net = net_cache[ckpt]
             mv_op, y_views, prior_maps_mod = build_condition_operator(
                 sample, masks_bundle, cond, device, min_variance)
@@ -344,7 +374,7 @@ def main():
                 t0 = time.time()
                 recon, dc_traj = mv_posterior_sample(
                     net, mv_op, y_views, prior_op, corr_mask_ch, latents,
-                    l_type=l_type, l_ss=l_ss, num_steps=num_steps,
+                    l_type=l_type, l_ss=l_ss_m, num_steps=num_steps,
                     sigma_min=sigma_min, sigma_max=sigma_max, rho=rho, S_churn=S_churn,
                     save_trajectory=args.save_dc_trajectory)
                 runtime = time.time() - t0
@@ -359,7 +389,7 @@ def main():
                     "method": mname, "condition": cond, "checkpoint": ckpt,
                     "reconstruction": recon_cplx, "reference": ref_np,
                     "subject_id": meta["subject_id"], "slice_id": meta["slice_id"],
-                    "seed": seed, "num_steps": num_steps, "l_ss": l_ss,
+                    "seed": seed, "num_steps": num_steps, "l_ss": l_ss_m,
                     "likelihood_type": l_type, "dc_trajectory": dc_traj,
                     "runtime_seconds": runtime, "num_net_evals": num_steps,
                     "metrics": metrics, "normalization_scale": meta.get("normalization_scale"),
