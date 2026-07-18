@@ -235,12 +235,16 @@ def main():
              "(`single_r4` - `fixed_split_ft` = +0.0125, single wins 68%): the duplicated ACS buys 48 "
              "unique columns instead of 64. Multi-view only helps when it buys extra scans, not when "
              "it subdivides one.\n")
-    L.append("### 2x budget (128 lines): duplicated vs COMPLEMENTARY\n")
-    results_table(main_t, ["dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft"], L)
-    L.append("The complementary methods (`comp2_*`, 44% coverage) beat their duplicated counterparts "
-             "(`dup2_*`, 25% coverage) by +0.041 (fine-tuned) to +0.052 (merged) SSIM on **100% of "
-             "subjects**, at an identical 128-line cost. Within each coverage level the merge and "
-             "fine-tuned variants sit within ~0.01 of each other.\n")
+    L.append("### 2x budget (128 lines): duplicated vs COMPLEMENTARY vs FULLY-complementary\n")
+    results_table(main_t, ["dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft",
+                           "fcomp2_merge", "fcomp2_ft"], L)
+    L.append("Three acquisition designs at an identical 128-line budget, in rising coverage: "
+             "`dup2_*` re-buys one mask (25%); `comp2_*` shares the full ACS and partitions the "
+             "outer lines (44%); `fcomp2_*` also **partitions the ACS** (split round-robin, no "
+             "overlap anywhere), reaching **50% coverage** — the maximum possible per line — at the "
+             "cost of no √V averaging in the k-space centre. The complementary methods beat "
+             "duplicated by +0.041 to +0.052 SSIM on 100% of subjects; fcomp vs comp isolates the "
+             "coverage-vs-centre-SNR trade (see Key comparisons).\n")
 
     # ---------------- 4-view results ----------------
     if quad_t is not None and not quad_t.summ.empty:
@@ -248,7 +252,7 @@ def main():
         L.append("This set answers the budget question directly: **with the same 256 lines a full "
                  "scan costs, can four cheap R=4 scans surpass one complete measurement?**\n")
         results_table(quad_t, ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
-                               "full_diffusion", "full_plain"], L)
+                               "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain"], L)
         L.append("**Answer: yes against the same reconstruction method, no against the best one.** "
                  "`comp4_ft` (4x complementary, 81% coverage) beats `full_diffusion` (the *same* "
                  "diffusion reconstruction given a complete measurement) on both metrics: +0.007 SSIM "
@@ -286,6 +290,20 @@ def main():
     L.append("  Identical 25% coverage, 2x the lines -> isolates the pure sqrt(2) SNR benefit of "
              "averaging cheap low-field repeats. Real, but half the size of the design effect.")
     L.append(cmp_line(main_t, "comp2_ft", "single_r4", "Best 2-view design vs single view"))
+    L.append("")
+    L.append("### Fully-complementary: maximum coverage vs k-space-centre SNR\n")
+    L.append("`fcomp*` splits the ACS across views (no overlap anywhere) to convert the duplicated-ACS "
+             "budget into extra coverage, trading away the √V noise averaging in the centre that "
+             "`comp*` keeps.\n")
+    L.append(cmp_line(main_t, "fcomp2_ft", "comp2_ft", "Split-ACS (50%) vs shared-ACS (44%), 2x"))
+    if quad_t is not None:
+        L.append(cmp_line(quad_t, "fcomp4_ft", "comp4_ft", "Split-ACS (100%) vs shared-ACS (81%), 4x"))
+        L.append("  At 4 views `fcomp4` reaches **full coverage** — a complete k-space assembled from "
+                 "4 disjoint cheap scans. The two comparisons below ask whether that equals one full "
+                 "scan (same coverage, same per-line single-rep noise, but 4 independent acquisitions "
+                 "stitched vs 1 monolithic):")
+        L.append(cmp_line(quad_t, "fcomp4_ft", "full_diffusion", "4x disjoint cheap scans vs 1 full scan (both diffusion)"))
+        L.append(cmp_line(quad_t, "fcomp4_merge", "full_plain", "4x disjoint cheap scans vs 1 full scan (both plain/merge)"))
     L.append("")
     L.append("### Cross-view fine-tuning (the contribution) vs the merge baseline\n")
     L.append(cmp_line(main_t, "fixed_split_ft", "fixed_split_merge", "Cross-view FT, 19% coverage"))
@@ -357,6 +375,20 @@ def main():
     L.append("## Limitations and negative findings\n")
     L.append("Retained per runbook 9.4 — negative results are results.\n")
     L.append("- **0.3 T low-field, not <0.1 T ultra-low-field.** No ultra-low-field claim is made.")
+    L.append("- **Sharing the ACS beats maximising coverage past a point.** The fully-complementary "
+             "design (`fcomp*`, split ACS, no overlap) buys more coverage per line than the "
+             "shared-ACS complementary design (`comp*`), but loses the √V noise averaging in the "
+             "k-space centre. At 2 views this is a wash (+0.004 SSIM for the +6% coverage); at 4 "
+             "views `comp4` (81%, √4 centre averaging) **beats** `fcomp4` (100%, no averaging) by "
+             "+0.008 SSIM despite covering less k-space. Low-frequency SNR is worth more than the "
+             "last columns of coverage.")
+    L.append("- **Four disjoint cheap scans reach a full scan's coverage but not its quality.** "
+             "`fcomp4` assembles a complete k-space from 4 disjoint R=4 scans (same coverage and "
+             "same per-line single-rep noise as `full_plain`), yet trails it by -0.031 SSIM / "
+             "-0.011 NRMSE — the cost of stitching 4 independently-acquired sub-scans (inter-scan "
+             "motion/phase drift), not undersampling. It does beat `full_diffusion` (+0.007 SSIM), "
+             "so it is a viable full-scan substitute when only a plain recon of the real full scan "
+             "is unavailable.")
     L.append("- **Joint likelihood == analytic merging** for aligned views at identical masks, as "
              "theory predicts. The multi-view contribution is not in the summation. (This is why the "
              "redundant original-prior joint methods were removed; each family keeps one merge "

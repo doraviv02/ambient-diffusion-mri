@@ -53,3 +53,16 @@ methods:
   comp4_merge:
     checkpoint: original
     condition: merge_quad_comp
+  # fully-complementary (split ACS, no overlap): coverage == lines bought
+  fcomp2_ft:
+    checkpoint: finetuned
+    condition: joint_extra_fullcomp
+  fcomp2_merge:
+    checkpoint: original
+    condition: merge_extra_fullcomp
+  fcomp4_ft:
+    checkpoint: finetuned
+    condition: joint_quad_fullcomp
+  fcomp4_merge:
+    checkpoint: original
+    condition: merge_quad_fullcomp

@@ -27,9 +27,9 @@ print('FINETUNED_LOADS_OK')"
 
 echo "=== [3/4] 2-view diffusion sharded on GPUs 2,3 ==="
 CUDA_VISIBLE_DEVICES=2 python solve_inverse_mv_adps.py --config "$CONFIG" --manifest "$EVAL_MAN" \
-  --methods single_r4,fixed_split_merge,fixed_split_ft,dup2_merge,dup2_ft,comp2_merge,comp2_ft --shard_id 0 --num_shards 2 --save_dc_trajectory --output_dir "$FINAL" &
+  --methods single_r4,fixed_split_merge,fixed_split_ft,dup2_merge,dup2_ft,comp2_merge,comp2_ft,fcomp2_merge,fcomp2_ft --shard_id 0 --num_shards 2 --save_dc_trajectory --output_dir "$FINAL" &
 CUDA_VISIBLE_DEVICES=3 python solve_inverse_mv_adps.py --config "$CONFIG" --manifest "$EVAL_MAN" \
-  --methods single_r4,fixed_split_merge,fixed_split_ft,dup2_merge,dup2_ft,comp2_merge,comp2_ft --shard_id 1 --num_shards 2 --save_dc_trajectory --output_dir "$FINAL" &
+  --methods single_r4,fixed_split_merge,fixed_split_ft,dup2_merge,dup2_ft,comp2_merge,comp2_ft,fcomp2_merge,fcomp2_ft --shard_id 1 --num_shards 2 --save_dc_trajectory --output_dir "$FINAL" &
 wait
 echo "2-view diffusion done"
 

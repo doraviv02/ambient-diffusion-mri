@@ -17,9 +17,10 @@ from analysis.plot_common import (load_results, zero_filled_mag, recon_mag, get_
 # Default column order for the 2-view set: classical -> single -> fixed budget ->
 # 2x duplicated -> 2x complementary. Override with --methods for the 4-view set.
 COLUMN_METHODS = ["classical_l1wav", "single_r4", "fixed_split_merge", "fixed_split_ft",
-                  "dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft"]
+                  "dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft",
+                  "fcomp2_merge", "fcomp2_ft"]
 QUAD_METHODS = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
-                "full_diffusion", "full_plain"]
+                "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain"]
 
 
 def _input_snr(case_methods):

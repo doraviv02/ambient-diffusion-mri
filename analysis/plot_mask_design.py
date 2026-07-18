@@ -21,11 +21,13 @@ import matplotlib.pyplot as plt
 # (condition, pretty name, design tag)
 ROWS = [
     ("single_r4", "single_r4\none cheap scan", "base"),
-    ("joint_fixed", "merge/joint_fixed\nfixed budget, 2xR=8", "base"),
-    ("joint_extra", "joint/merge_extra\n2xR=4 DUPLICATED", "dup"),
-    ("joint_extra_comp", "joint/merge_extra_comp\n2xR=4 COMPLEMENTARY", "comp"),
-    ("joint_quad", "joint/merge_quad\n4xR=4 DUPLICATED", "dup"),
-    ("joint_quad_comp", "joint/merge_quad_comp\n4xR=4 COMPLEMENTARY", "comp"),
+    ("joint_fixed", "fixed_split\nfixed budget, 2xR=8", "base"),
+    ("joint_extra", "dup2\n2xR=4 DUPLICATED", "dup"),
+    ("joint_extra_comp", "comp2\n2xR=4 COMPLEMENTARY (shared ACS)", "comp"),
+    ("joint_extra_fullcomp", "fcomp2\n2xR=4 FULLY-COMP (split ACS)", "fcomp"),
+    ("joint_quad", "dup4\n4xR=4 DUPLICATED", "dup"),
+    ("joint_quad_comp", "comp4\n4xR=4 COMPLEMENTARY (shared ACS)", "comp"),
+    ("joint_quad_fullcomp", "fcomp4\n4xR=4 FULLY-COMP (split ACS)", "fcomp"),
     ("single_full", "single_full\none complete measurement", "full"),
 ]
 # union-panel colormap + text colour per design tag
@@ -33,6 +35,7 @@ STYLE = {
     "base": ("Blues", "#2a5d8f"),
     "dup": ("Oranges", "#b5561a"),
     "comp": ("Greens", "#2a7f3f"),
+    "fcomp": ("Purples", "#6a51a3"),
     "full": ("Reds", "#a83236"),
 }
 
@@ -79,7 +82,7 @@ def main():
         ax.set_xticks([]); ax.set_yticks([])
         axes[r, 0].set_ylabel(name, fontsize=9.5, rotation=0, ha="right", va="center",
                               labelpad=12,
-                              fontweight="bold" if tag == "comp" else "normal",
+                              fontweight="bold" if tag in ("comp", "fcomp") else "normal",
                               color=txt)
         # efficiency annotation
         axes[r, max_v].text(1.04, 0.5, f"{lines} lines bought\n-> {len(uniq)} unique\n"

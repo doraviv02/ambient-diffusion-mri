@@ -106,6 +106,33 @@ def build_conditions(H, W, cfg, rng):
     union_extra_comp = int(len(np.union1d(comp_cols[0], comp_cols[1])))
     union_quad_comp = int(len(np.unique(np.concatenate(comp_cols))))
 
+    # --- FULLY-COMPLEMENTARY designs (no overlap anywhere, split ACS) ----------
+    # Unlike *_comp above (which shares the full ACS across views for a sqrt(V)
+    # SNR gain in the centre), here the ACS itself is partitioned disjointly
+    # (round-robin) across views, and so are the outer lines. Nothing is measured
+    # twice, so coverage == lines bought (100% efficient): V=2 -> 128 cols (50%),
+    # V=4 -> 256 cols (a *complete* k-space assembled from 4 cheap scans). The
+    # trade-off is no averaging anywhere -> single-repetition noise per column.
+    # NOTE: these rng draws come AFTER all the ones above, so every previously
+    # generated condition is bit-identical and earlier results stay valid.
+    def make_fully_complementary(V):
+        n_per_view = int(round(W / R1))          # 64 lines/view (== R=4 budget)
+        outer_perm = pool_c.copy()               # non-ACS columns
+        rng.shuffle(outer_perm)
+        cols, o = [], 0
+        for v in range(V):
+            acs_v = acs[v::V]                    # interleaved round-robin ACS split
+            n_outer_v = n_per_view - len(acs_v)
+            outer_v = outer_perm[o:o + n_outer_v]; o += n_outer_v
+            cols.append(np.union1d(acs_v, outer_v))
+        return cols
+    fcomp2_cols = make_fully_complementary(2)
+    fcomp4_cols = make_fully_complementary(4)
+    extra_fullcomp = np.stack([cols_to_mask(c, H, W) for c in fcomp2_cols], axis=0)  # [2,1,H,W]
+    quad_fullcomp = np.stack([cols_to_mask(c, H, W) for c in fcomp4_cols], axis=0)   # [4,1,H,W]
+    union_extra_fullcomp = int(len(np.unique(np.concatenate(fcomp2_cols))))
+    union_quad_fullcomp = int(len(np.unique(np.concatenate(fcomp4_cols))))
+
     # per-condition acquired-coefficient accounting (columns * H rows)
     def col_count(cols):
         return int(len(cols)) * H
@@ -122,6 +149,9 @@ def build_conditions(H, W, cfg, rng):
         # complementary variants: same budget, far more unique coverage
         "extra_comp_union": union_extra_comp * H,
         "quad_comp_union": union_quad_comp * H,
+        # fully-complementary variants: no overlap, coverage == lines bought
+        "extra_fullcomp_union": union_extra_fullcomp * H,
+        "quad_fullcomp_union": union_quad_fullcomp * H,
     }
     conditions = {
         "single_r4": torch.from_numpy(single),
@@ -132,6 +162,8 @@ def build_conditions(H, W, cfg, rng):
         "single_full": torch.from_numpy(full),
         "joint_extra_comp": torch.from_numpy(extra_comp),
         "joint_quad_comp": torch.from_numpy(quad_comp),
+        "joint_extra_fullcomp": torch.from_numpy(extra_fullcomp),
+        "joint_quad_fullcomp": torch.from_numpy(quad_fullcomp),
     }
     return conditions, torch.from_numpy(acs_mask), counts
 

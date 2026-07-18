@@ -90,6 +90,12 @@ _MASK_SOURCE = {
     "merge_extra_comp": "joint_extra_comp",
     "joint_quad_comp": "joint_quad_comp",
     "merge_quad_comp": "joint_quad_comp",
+    # FULLY-complementary: ACS also partitioned (no overlap anywhere), so coverage
+    # == lines bought (V=2 -> 50%, V=4 -> 100%) at single-repetition noise.
+    "joint_extra_fullcomp": "joint_extra_fullcomp",
+    "merge_extra_fullcomp": "joint_extra_fullcomp",
+    "joint_quad_fullcomp": "joint_quad_fullcomp",
+    "merge_quad_fullcomp": "joint_quad_fullcomp",
 }
 # Condition -> unique-column coverage (measured; see analysis/experiments.py).
 # Used only to resolve per-tier l_ss when cfg carries `l_ss_by_tier`.
@@ -98,11 +104,14 @@ _CONDITION_COVERAGE = {
     "joint_extra": 0.25, "merge_extra": 0.25, "joint_quad": 0.25, "merge_quad": 0.25,
     "joint_extra_comp": 0.438, "merge_extra_comp": 0.438,
     "joint_quad_comp": 0.812, "merge_quad_comp": 0.812,
+    "joint_extra_fullcomp": 0.50, "merge_extra_fullcomp": 0.50,
+    "joint_quad_fullcomp": 1.0, "merge_quad_fullcomp": 1.0,
     "single_full": 1.0,
 }
 
 _MERGE_CONDITIONS = ("merge_fixed", "merge_extra", "merge_quad",
-                     "merge_extra_comp", "merge_quad_comp")
+                     "merge_extra_comp", "merge_quad_comp",
+                     "merge_extra_fullcomp", "merge_quad_fullcomp")
 
 
 def build_condition_operator(sample, masks_bundle, condition, device, min_variance):

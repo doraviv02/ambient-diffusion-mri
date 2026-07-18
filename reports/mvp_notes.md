@@ -292,6 +292,43 @@ duplicated design the answer was *no* by 0.093; complementary masks close two th
 of that. Also: at 81% coverage the merge and fine-tuned variants **converge**
 (comp4_merge ~ comp4_ft within 0.002).
 
+## 4.3 Fully-complementary (split-ACS): maximum coverage vs k-space-centre SNR
+A third acquisition design at the *same* budget. `*_comp` shares the full 16-line
+ACS across all V views (each ACS line measured V times → √V SNR in the centre) and
+partitions only the outer lines. `*_fullcomp` **also partitions the ACS**
+(round-robin, no overlap anywhere), converting the duplicated-ACS budget into extra
+coverage: `fcomp2` = 128 unique cols (50%), `fcomp4` = **256 = a complete k-space**
+assembled from 4 disjoint cheap scans. The trade: nothing is averaged, so every
+column (ACS included) carries single-repetition noise. SSIM (subject-level):
+
+| | shared-ACS (comp) | split-ACS (fcomp) | fcomp - comp |
+|---|---|---|---|
+| 2-view | comp2_merge 0.706 / comp2_ft 0.704 | fcomp2_merge 0.707 / fcomp2_ft 0.708 | **+0.004 (56%)** |
+| 4-view | comp4_merge 0.766 / comp4_ft 0.764 | fcomp4_merge 0.765 / fcomp4_ft 0.756 | **-0.008 (20%)** |
+
+**The winner flips with V.** At 2 views the extra 6% coverage (44→50%) just offsets
+the lost √2 centre averaging — a wash (+0.004, marginal). At 4 views the centre
+averaging is √4 = 2× and the coverage gap is only 19% (81→100%), so **sharing the
+ACS wins**: comp4 beats fcomp4 by +0.008 despite covering *less* k-space. Lesson:
+past a point, SNR in the low frequencies is worth more than the last columns of
+coverage — don't stop duplicating the ACS.
+
+**fcomp4 vs one full scan (the "can disjoint cheap scans replace a full scan?" test
+at *true* 100% coverage):** fcomp4 and full_plain have identical coverage *and*
+identical per-line single-rep noise; the only difference is 4 independently-acquired
+sub-scans stitched vs 1 monolithic acquisition. Results:
+- `fcomp4_merge` 0.765 **beats** `full_diffusion` 0.758 (+0.007 SSIM, and NRMSE
+  0.1306 < 0.1346) — a plain merge of 4 cheap scans covering all of k-space beats a
+  diffusion recon of a full scan.
+- but `fcomp4_merge` - `full_plain` = **-0.031 SSIM (10%), +0.011 NRMSE**. So four
+  disjoint cheap scans reach a full scan's coverage yet fall ~0.03 SSIM short of one
+  coherent full scan. Since coverage and per-line noise are equal, that gap is the
+  **cost of stitching independent acquisitions** (inter-scan motion/phase drift),
+  not undersampling or SNR.
+- `fcomp4_ft` 0.756 < `fcomp4_merge` 0.765 (-0.009): the diffusion prior **hurts**
+  again on this now-fully-sampled coverage, mirroring full_diffusion < full_plain
+  (§4.2) and the l_ss retune's dense-tier finding (§7).
+
 ---
 
 # 5. HEADLINE: acquisition design dominates reconstruction method
@@ -324,6 +361,12 @@ the same lines.
 - Joint likelihood == analytic merging for aligned identical-mask views (theory
   predicted it; we confirm it, and do not claim the summation as a contribution).
   This redundancy is *why* the original-prior joint methods were removed (§Naming).
+- **Sharing the ACS beats maximising coverage at high V** (§4.3): fcomp4 (100% cov,
+  split ACS) *loses* to comp4 (81% cov, √4-averaged ACS) by 0.008 SSIM. Centre SNR
+  outweighs the last 19% of coverage.
+- **Disjoint cheap scans reach full coverage but not full-scan quality** (§4.3):
+  fcomp4 trails full_plain by 0.031 SSIM at equal coverage/noise — the stitching
+  penalty of 4 independent acquisitions.
 - Cross-view fine-tuning is worth ~0 above 40% coverage.
 - The diffusion prior *hurts* on well-sampled data (`full_diffusion` < `full_plain`).
 - At a **fixed** budget, multi-view *loses* to single-view (single_r4 - fixed_split_ft

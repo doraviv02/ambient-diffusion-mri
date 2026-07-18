@@ -61,7 +61,7 @@ Subject-level mean [95% bootstrap CI]. Grouped by acquisition budget.
 
 At a **fixed** budget, splitting into two views *loses* to spending it on one view (`single_r4` - `fixed_split_ft` = +0.0125, single wins 68%): the duplicated ACS buys 48 unique columns instead of 64. Multi-view only helps when it buys extra scans, not when it subdivides one.
 
-### 2x budget (128 lines): duplicated vs COMPLEMENTARY
+### 2x budget (128 lines): duplicated vs COMPLEMENTARY vs FULLY-complementary
 
 | Method | Description | Views | Lines | Unique cols | Coverage | SSIM | NRMSE | Held-out k err |
 |---|---|---|---|---|---|---|---|---|
@@ -69,8 +69,10 @@ At a **fixed** budget, splitting into two views *loses* to spending it on one vi
 | `dup2_ft` | 2x duplicated, xview-FT | 2 | 128 | 64 | 25% | 0.6628 [0.6466, 0.6818] | 0.1648 [0.1599, 0.1698] | 0.8574 [0.8492, 0.8649] |
 | `comp2_merge` | 2x complementary, merged | 2 | 128 | 112 | 44% | 0.7059 [0.6929, 0.7218] | 0.1493 [0.1447, 0.1541] | 0.8484 [0.8402, 0.8561] |
 | `comp2_ft` | 2x complementary, xview-FT | 2 | 128 | 112 | 44% | 0.7042 [0.6908, 0.7202] | 0.1494 [0.1452, 0.1537] | 0.8480 [0.8400, 0.8556] |
+| `fcomp2_merge` | 2x fully-complementary, merged | 2 | 128 | 128 | 50% | 0.7067 [0.6944, 0.7222] | 0.1486 [0.1446, 0.1527] | 0.8458 [0.8374, 0.8536] |
+| `fcomp2_ft` | 2x fully-complementary, xview-FT | 2 | 128 | 128 | 50% | 0.7083 [0.6957, 0.7236] | 0.1485 [0.1447, 0.1525] | 0.8440 [0.8355, 0.8519] |
 
-The complementary methods (`comp2_*`, 44% coverage) beat their duplicated counterparts (`dup2_*`, 25% coverage) by +0.041 (fine-tuned) to +0.052 (merged) SSIM on **100% of subjects**, at an identical 128-line cost. Within each coverage level the merge and fine-tuned variants sit within ~0.01 of each other.
+Three acquisition designs at an identical 128-line budget, in rising coverage: `dup2_*` re-buys one mask (25%); `comp2_*` shares the full ACS and partitions the outer lines (44%); `fcomp2_*` also **partitions the ACS** (split round-robin, no overlap anywhere), reaching **50% coverage** — the maximum possible per line — at the cost of no √V averaging in the k-space centre. The complementary methods beat duplicated by +0.041 to +0.052 SSIM on 100% of subjects; fcomp vs comp isolates the coverage-vs-centre-SNR trade (see Key comparisons).
 
 ## Results: 4-view set (20 subjects, 59 slices)
 
@@ -83,6 +85,8 @@ This set answers the budget question directly: **with the same 256 lines a full 
 | `dup4_ft` | 4x duplicated, xview-FT | 4 | 256 | 64 | 25% | 0.7032 [0.6845, 0.7236] | 0.1447 [0.1418, 0.1476] | 0.8578 [0.8495, 0.8661] |
 | `comp4_merge` | 4x complementary, merged | 4 | 256 | 208 | 81% | 0.7656 [0.7513, 0.7816] | 0.1215 [0.1192, 0.1238] | 0.8370 [0.8251, 0.8489] |
 | `comp4_ft` | 4x complementary, xview-FT | 4 | 256 | 208 | 81% | 0.7643 [0.7492, 0.7809] | 0.1205 [0.1185, 0.1224] | 0.8388 [0.8268, 0.8505] |
+| `fcomp4_merge` | 4x fully-complementary, merged | 4 | 256 | 256 | 100% | 0.7650 [0.7508, 0.7809] | 0.1306 [0.1256, 0.1363] | n/a |
+| `fcomp4_ft` | 4x fully-complementary, xview-FT | 4 | 256 | 256 | 100% | 0.7559 [0.7408, 0.7735] | 0.1406 [0.1334, 0.1484] | n/a |
 | `full_diffusion` | Full scan, diffusion | 1 | 256 | 256 | 100% | 0.7577 [0.7436, 0.7733] | 0.1346 [0.1303, 0.1396] | n/a |
 | `full_plain` | Full scan, plain recon | 1 | 256 | 256 | 100% | 0.7964 [0.7832, 0.8118] | 0.1198 [0.1165, 0.1240] | n/a |
 
@@ -104,6 +108,16 @@ _Note: the redundant "joint likelihood, original prior" methods (old M4/M8/M10/M
 - **Extra cheap repetition (averaged) vs single view** (dup2_merge - single_r4): **+0.0366** SSIM [+0.0312, +0.0415], dup2_merge wins on 96% of 25 subjects.
   Identical 25% coverage, 2x the lines -> isolates the pure sqrt(2) SNR benefit of averaging cheap low-field repeats. Real, but half the size of the design effect.
 - **Best 2-view design vs single view** (comp2_ft - single_r4): **+0.0866** SSIM [+0.0786, +0.0949], comp2_ft wins on 100% of 25 subjects.
+
+### Fully-complementary: maximum coverage vs k-space-centre SNR
+
+`fcomp*` splits the ACS across views (no overlap anywhere) to convert the duplicated-ACS budget into extra coverage, trading away the √V noise averaging in the centre that `comp*` keeps.
+
+- **Split-ACS (50%) vs shared-ACS (44%), 2x** (fcomp2_ft - comp2_ft): **+0.0041** SSIM [+0.0005, +0.0079], fcomp2_ft wins on 56% of 25 subjects.
+- **Split-ACS (100%) vs shared-ACS (81%), 4x** (fcomp4_ft - comp4_ft): **-0.0083** SSIM [-0.0125, -0.0041], fcomp4_ft wins on 20% of 20 subjects.
+  At 4 views `fcomp4` reaches **full coverage** — a complete k-space assembled from 4 disjoint cheap scans. The two comparisons below ask whether that equals one full scan (same coverage, same per-line single-rep noise, but 4 independent acquisitions stitched vs 1 monolithic):
+- **4x disjoint cheap scans vs 1 full scan (both diffusion)** (fcomp4_ft - full_diffusion): **-0.0018** SSIM [-0.0056, +0.0022], fcomp4_ft wins on 35% of 20 subjects.
+- **4x disjoint cheap scans vs 1 full scan (both plain/merge)** (fcomp4_merge - full_plain): **-0.0314** SSIM [-0.0428, -0.0181], fcomp4_merge wins on 10% of 20 subjects.
 
 ### Cross-view fine-tuning (the contribution) vs the merge baseline
 
@@ -161,6 +175,8 @@ _Note: the redundant "joint likelihood, original prior" methods (old M4/M8/M10/M
 Retained per runbook 9.4 — negative results are results.
 
 - **0.3 T low-field, not <0.1 T ultra-low-field.** No ultra-low-field claim is made.
+- **Sharing the ACS beats maximising coverage past a point.** The fully-complementary design (`fcomp*`, split ACS, no overlap) buys more coverage per line than the shared-ACS complementary design (`comp*`), but loses the √V noise averaging in the k-space centre. At 2 views this is a wash (+0.004 SSIM for the +6% coverage); at 4 views `comp4` (81%, √4 centre averaging) **beats** `fcomp4` (100%, no averaging) by +0.008 SSIM despite covering less k-space. Low-frequency SNR is worth more than the last columns of coverage.
+- **Four disjoint cheap scans reach a full scan's coverage but not its quality.** `fcomp4` assembles a complete k-space from 4 disjoint R=4 scans (same coverage and same per-line single-rep noise as `full_plain`), yet trails it by -0.031 SSIM / -0.011 NRMSE — the cost of stitching 4 independently-acquired sub-scans (inter-scan motion/phase drift), not undersampling. It does beat `full_diffusion` (+0.007 SSIM), so it is a viable full-scan substitute when only a plain recon of the real full scan is unavailable.
 - **Joint likelihood == analytic merging** for aligned views at identical masks, as theory predicts. The multi-view contribution is not in the summation. (This is why the redundant original-prior joint methods were removed; each family keeps one merge representative plus the fine-tuned method.)
 - **Cross-view fine-tuning is worth ~0 above 40% coverage** and only ~+0.01 in the sparse regime. It is also a short (0.02 Mimg) empirical self-supervised adaptation and does **not** inherit the Ambient Diffusion identifiability theorem.
 - **The diffusion prior hurts on well-sampled data** (`full_diffusion` < `full_plain` on 90% of subjects), and this is **not** a guidance-tuning artefact. We re-tuned `l_ss` per coverage tier on validation (held-out k-space error, test untouched): `l_ss=30` is optimal at every tier, and raising it on the dense tier *lowers* SSIM (0.642 -> 0.513 by l_ss=300) because larger DPS steps overshoot and inject noise. The gap is intrinsic to soft-guidance diffusion sampling vs a direct least-squares solve; closing it needs a different sampler (hard data-consistency projection), not a scalar knob. See `figures/mvp/lss_tier_tuning.png`.

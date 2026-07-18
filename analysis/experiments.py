@@ -50,12 +50,18 @@ EXPERIMENTS = {
     # ---- 2x budget, COMPLEMENTARY (44% coverage) -------------------------
     "comp2_merge":       Exp("2x complementary, merged", "original",  "merge",  "merge_extra_comp", 2, 128, 112, 0.438, "2x",    "main"),
     "comp2_ft":          Exp("2x complementary, xview-FT","finetuned","ft",     "joint_extra_comp", 2, 128, 112, 0.438, "2x",    "main"),
+    # ---- 2x budget, FULLY-complementary (50% coverage, split ACS, no overlap) --
+    "fcomp2_merge":      Exp("2x fully-complementary, merged",   "original",  "merge", "merge_extra_fullcomp", 2, 128, 128, 0.500, "2x", "main"),
+    "fcomp2_ft":         Exp("2x fully-complementary, xview-FT", "finetuned", "ft",    "joint_extra_fullcomp", 2, 128, 128, 0.500, "2x", "main"),
     # ---- 4x budget, DUPLICATED (25% coverage) ----------------------------
     "dup4_merge":        Exp("4x duplicated, merged",    "original",  "merge",  "merge_quad",       4, 256,  64, 0.250, "4x",    "quad"),
     "dup4_ft":           Exp("4x duplicated, xview-FT",  "finetuned", "ft",     "joint_quad",       4, 256,  64, 0.250, "4x",    "quad"),
     # ---- 4x budget, COMPLEMENTARY (81% coverage) -------------------------
     "comp4_merge":       Exp("4x complementary, merged", "original",  "merge",  "merge_quad_comp",  4, 256, 208, 0.812, "4x",    "quad"),
     "comp4_ft":          Exp("4x complementary, xview-FT","finetuned","ft",     "joint_quad_comp",  4, 256, 208, 0.812, "4x",    "quad"),
+    # ---- 4x budget, FULLY-complementary (100% coverage = complete scan, split ACS) --
+    "fcomp4_merge":      Exp("4x fully-complementary, merged",   "original",  "merge", "merge_quad_fullcomp", 4, 256, 256, 1.000, "4x", "quad"),
+    "fcomp4_ft":         Exp("4x fully-complementary, xview-FT", "finetuned", "ft",    "joint_quad_fullcomp", 4, 256, 256, 1.000, "4x", "quad"),
     # ---- one complete measurement (the ceiling) --------------------------
     "full_diffusion":    Exp("Full scan, diffusion",     "original",  "single", "single_full",      1, 256, 256, 1.000, "full",  "quad"),
     "full_plain":        Exp("Full scan, plain recon",   "none",      "plain",  "single_full",      1, 256, 256, 1.000, "full",  "quad"),
@@ -76,10 +82,11 @@ LEGACY_IDS = {
 # Display order for the 2-view set: by budget, then merge -> fine-tuned.
 MAIN_ORDER = ["classical_adjoint", "classical_l1wav", "single_r4",
               "fixed_split_merge", "fixed_split_ft",
-              "dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft"]
+              "dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft",
+              "fcomp2_merge", "fcomp2_ft"]
 # Display order for the 4-view set: worst -> best.
 QUAD_ORDER = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
-              "full_diffusion", "full_plain"]
+              "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain"]
 
 METHOD_ORDER = MAIN_ORDER  # back-compat for existing figure scripts
 METHOD_LABELS = {k: v.label for k, v in EXPERIMENTS.items()}
@@ -92,7 +99,8 @@ DESIGN_COLORS = {
     "fixed": "#9e9e9e",   # split one scan
     "1x":    "#4c72b0",   # one cheap scan
     "dup":   "#dd8452",   # duplicated masks
-    "comp":  "#55a868",   # complementary masks
+    "comp":  "#55a868",   # complementary masks (shared ACS)
+    "fcomp": "#8172b2",   # fully-complementary masks (split ACS, no overlap)
     "full":  "#c44e52",   # one complete measurement
 }
 
@@ -102,6 +110,8 @@ def design_of(m):
     e = EXPERIMENTS[m]
     if e.budget in ("full", "1x", "fixed"):
         return e.budget
+    if e.condition.endswith("_fullcomp"):
+        return "fcomp"
     return "comp" if e.condition.endswith("_comp") else "dup"
 
 
