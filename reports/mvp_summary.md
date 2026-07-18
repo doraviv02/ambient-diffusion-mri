@@ -148,6 +148,11 @@ Two *complete* k-space acquisitions of the same slice (512 lines), the realistic
 
 ## Figures
 
+**Results tables (visualized)**
+
+- `figures/mvp/results_2view.png` -- the two 2-view result tables (fixed budget; 2x budget) as SSIM and NRMSE bars with 95% CI, coloured by design
+- `figures/mvp/results_4view.png` -- the 4-view result table as SSIM and NRMSE bars with 95% CI (the budget question, incl. dualfull NEX=2)
+
 **Cross-experiment (the conclusions)**
 
 - `figures/mvp/experiment_overview.png` -- SSIM vs unique k-space coverage, all methods, both sets -- the headline: coverage separates, method does not
