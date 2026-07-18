@@ -102,10 +102,44 @@ def main():
         mv_op, y_views, _ = build_condition_operator(sample, masks_bundle, "merge_fixed", device, 1e-8)
 
         for mname in methods:
+            if mname == "dualfull_merge":
+                # Classical NEX=2: noise-weighted average of TWO full-k-space
+                # acquisitions of the same slice. For equal sigma this is exactly
+                # (y0+y1)/2 with effective noise sigma/sqrt2; plain adjoint recon
+                # (no diffusion) -- the true low-field SNR ceiling.
+                out_name = f"dualfull_merge__{meta['subject_id']}_sl{meta['slice_id']:02d}_seed0.pt"
+                out_path = os.path.join(args.output_dir, out_name)
+                if os.path.exists(out_path):
+                    continue
+                t0 = time.time()
+                cond = masks_bundle["conditions"]["dual_full"]          # [2,1,H,W] ones
+                ksp2 = sample["ksp_views"][:2]                          # [2,C,H,W] natural
+                mps0 = sample["s_maps_views"][0].numpy()               # [C,H,W] shared
+                noise2 = sample["noise_std"][:2]
+                merged = noise_weighted_merge(cond * ksp2, cond, noise2)
+                recon = adjoint_recon(merged["ksp"][0].numpy(), mps0)  # [H,W]
+                runtime = time.time() - t0
+                op_d, y_d, _ = build_condition_operator(sample, masks_bundle, "dual_full",
+                                                        device, 1e-8)
+                metrics = compute_all_metrics(recon.astype(np.complex64), sample, op_d, y_d,
+                                              device, ref_np)
+                torch.save({
+                    "method": "dualfull_merge", "condition": "dual_full", "checkpoint": None,
+                    "reconstruction": recon.astype(np.complex64), "reference": ref_np,
+                    "subject_id": meta["subject_id"], "slice_id": meta["slice_id"], "seed": 0,
+                    "num_steps": 0, "l_ss": None, "likelihood_type": None, "lambda": None,
+                    "runtime_seconds": runtime, "num_net_evals": 0, "metrics": metrics,
+                    "normalization_scale": meta.get("normalization_scale"),
+                    "mask_path": masks_path,
+                }, out_path)
+                n += 1
+                print(f"[dualfull_merge] {meta['subject_id']} sl{meta['slice_id']} "
+                      f"ssim={metrics.get('ssim', float('nan')):.3f}", flush=True)
+                continue
             if mname == "full_plain":
                 # Plain reconstruction of ONE complete k-space measurement (R=1,
                 # single repetition) -- the "single full scan" comparison target.
-                out_name = f"MF__{meta['subject_id']}_sl{meta['slice_id']:02d}_seed0.pt"
+                out_name = f"full_plain__{meta['subject_id']}_sl{meta['slice_id']:02d}_seed0.pt"
                 out_path = os.path.join(args.output_dir, out_name)
                 if os.path.exists(out_path):
                     continue

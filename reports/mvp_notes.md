@@ -329,6 +329,36 @@ sub-scans stitched vs 1 monolithic acquisition. Results:
   again on this now-fully-sampled coverage, mirroring full_diffusion < full_plain
   (§4.2) and the l_ss retune's dense-tier finding (§7).
 
+## 4.4 Two full acquisitions (NEX=2): the true low-field ceiling
+The most honest test of low-field reconstruction: take **two complete k-space
+acquisitions** of the same slice (512 lines) and combine them, once by the
+classical noise-weighted average and once by the learned xview-FT. For equal σ the
+merge is exactly `(y0+y1)/2` at σ/√2 — the standard NEX=2 average — reconstructed by
+a plain adjoint (no diffusion). `dualfull_ft` is the fine-tuned joint diffusion recon
+over the same two full views. 4-view set, 59 slices, brain-masked SSIM:
+
+| method | SSIM | NRMSE |
+|---|---|---|
+| **`dualfull_merge` (classical NEX=2 average)** | **0.878** | **0.099** |
+| `full_plain` (1 full scan, classical) | 0.796 | 0.120 |
+| `full_diffusion` (1 full scan, diffusion) | 0.758 | 0.135 |
+| `dualfull_ft` (learned, 2 full views) | 0.759 | 0.143 |
+
+**This is the study's sharpest result.**
+- `dualfull_merge` is **the best method anywhere in the study**, +0.081 SSIM over one
+  full scan on **100% of subjects** (NRMSE 0.099 vs 0.120, also 100%). A second full
+  acquisition (pure √2 SNR) is worth far more than any reconstruction cleverness we
+  tested. This is the realistic low-field quality ceiling.
+- The learned method **fails the test decisively**: `dualfull_ft` **loses to the
+  classical average by 0.119 SSIM (0% of subjects win)** and gains ≈0 over
+  single-full diffusion (`dualfull_ft` − `full_diffusion` = +0.001). Given two clean
+  full acquisitions, the diffusion pipeline extracts almost none of the extra SNR —
+  the prior + guidance caps quality regardless of how good the data is.
+- Consistent with every dense-coverage result (§4.2, §4.3, §7): **the learned prior
+  is only valuable in the undersampled regime**; at full coverage, plain averaging
+  dominates. If you can take a second full scan at low field, average it — don't run
+  a generative reconstruction.
+
 ---
 
 # 5. HEADLINE: acquisition design dominates reconstruction method

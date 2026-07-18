@@ -107,6 +107,8 @@ _CONDITION_COVERAGE = {
     "joint_extra_fullcomp": 0.50, "merge_extra_fullcomp": 0.50,
     "joint_quad_fullcomp": 1.0, "merge_quad_fullcomp": 1.0,
     "single_full": 1.0,
+    # two complete measurements of the same slice (NEX=2), 100% coverage each
+    "dual_full": 1.0,
 }
 
 _MERGE_CONDITIONS = ("merge_fixed", "merge_extra", "merge_quad",

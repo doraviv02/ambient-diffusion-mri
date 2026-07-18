@@ -53,6 +53,10 @@ methods:
   comp4_merge:
     checkpoint: original
     condition: merge_quad_comp
+  # two full acquisitions of the same slice (NEX=2), joint xview-FT
+  dualfull_ft:
+    checkpoint: finetuned
+    condition: dual_full
   # fully-complementary (split ACS, no overlap): coverage == lines bought
   fcomp2_ft:
     checkpoint: finetuned

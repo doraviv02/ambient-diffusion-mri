@@ -20,7 +20,8 @@ COLUMN_METHODS = ["classical_l1wav", "single_r4", "fixed_split_merge", "fixed_sp
                   "dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft",
                   "fcomp2_merge", "fcomp2_ft"]
 QUAD_METHODS = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
-                "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain"]
+                "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain",
+                "dualfull_merge", "dualfull_ft"]
 
 
 def _input_snr(case_methods):

@@ -34,6 +34,7 @@ DESIGN_LABEL = {
     "comp": "extra scans, COMPLEMENTARY (shared ACS)",
     "fcomp": "extra scans, FULLY-COMP (split ACS, no overlap)",
     "full": "one complete measurement",
+    "dualfull": "TWO complete measurements (NEX=2)",
 }
 
 
@@ -113,7 +114,7 @@ def fig_overview(main, quad, out):
                color="#c44e52", fontsize=9, va="top")
 
     handles = [plt.Line2D([], [], marker="o", ls="", color=DESIGN_COLORS[k], ms=11,
-                          label=DESIGN_LABEL[k]) for k in ["1x", "fixed", "dup", "comp", "fcomp", "full"]]
+                          label=DESIGN_LABEL[k]) for k in ["1x", "fixed", "dup", "comp", "fcomp", "full", "dualfull"]]
     handles += [plt.Line2D([], [], marker=MARKERS[k], ls="", color="gray", ms=11,
                            label=f"{k}") for k in ["single", "merge", "ft", "plain"]]
     handles += [plt.Line2D([], [], marker="o", ls="", mfc="white", mec="black", mew=2, ms=11,
@@ -222,7 +223,7 @@ def fig_budget(main, quad, out):
         ax.set_title(title, fontsize=11)
         ax.grid(axis="y", alpha=0.3)
     handles = [plt.Rectangle((0, 0), 1, 1, color=DESIGN_COLORS[k], label=DESIGN_LABEL[k])
-               for k in ["1x", "fixed", "dup", "comp", "fcomp", "full"]]
+               for k in ["1x", "fixed", "dup", "comp", "fcomp", "full", "dualfull"]]
     handles += [plt.Rectangle((0, 0), 1, 1, fc="white", ec="black", lw=1.8,
                               label="cross-view fine-tuned")]
     # figure-level legend: bars reach y=0 so there is no free space inside an axes

@@ -65,6 +65,9 @@ EXPERIMENTS = {
     # ---- one complete measurement (the ceiling) --------------------------
     "full_diffusion":    Exp("Full scan, diffusion",     "original",  "single", "single_full",      1, 256, 256, 1.000, "full",  "quad"),
     "full_plain":        Exp("Full scan, plain recon",   "none",      "plain",  "single_full",      1, 256, 256, 1.000, "full",  "quad"),
+    # ---- TWO complete measurements of the same slice (low-field NEX=2) ----
+    "dualfull_merge":    Exp("2 full scans, classical avg (NEX=2)", "none",      "plain", "dual_full", 2, 512, 256, 1.000, "dualfull", "quad"),
+    "dualfull_ft":       Exp("2 full scans, xview-FT",              "finetuned", "ft",    "dual_full", 2, 512, 256, 1.000, "dualfull", "quad"),
 }
 
 # Old M#/MF id -> current slug (for migrating result files and reading old notes).
@@ -86,7 +89,8 @@ MAIN_ORDER = ["classical_adjoint", "classical_l1wav", "single_r4",
               "fcomp2_merge", "fcomp2_ft"]
 # Display order for the 4-view set: worst -> best.
 QUAD_ORDER = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
-              "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain"]
+              "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain",
+              "dualfull_merge", "dualfull_ft"]
 
 METHOD_ORDER = MAIN_ORDER  # back-compat for existing figure scripts
 METHOD_LABELS = {k: v.label for k, v in EXPERIMENTS.items()}
@@ -102,13 +106,14 @@ DESIGN_COLORS = {
     "comp":  "#55a868",   # complementary masks (shared ACS)
     "fcomp": "#8172b2",   # fully-complementary masks (split ACS, no overlap)
     "full":  "#c44e52",   # one complete measurement
+    "dualfull": "#7b2d26",  # two complete measurements (NEX=2)
 }
 
 
 def design_of(m):
     """Coarse acquisition-design tag used for colouring."""
     e = EXPERIMENTS[m]
-    if e.budget in ("full", "1x", "fixed"):
+    if e.budget in ("full", "1x", "fixed", "dualfull"):
         return e.budget
     if e.condition.endswith("_fullcomp"):
         return "fcomp"

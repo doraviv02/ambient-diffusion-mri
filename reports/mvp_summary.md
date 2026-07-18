@@ -89,6 +89,8 @@ This set answers the budget question directly: **with the same 256 lines a full 
 | `fcomp4_ft` | 4x fully-complementary, xview-FT | 4 | 256 | 256 | 100% | 0.7559 [0.7408, 0.7735] | 0.1406 [0.1334, 0.1484] | n/a |
 | `full_diffusion` | Full scan, diffusion | 1 | 256 | 256 | 100% | 0.7577 [0.7436, 0.7733] | 0.1346 [0.1303, 0.1396] | n/a |
 | `full_plain` | Full scan, plain recon | 1 | 256 | 256 | 100% | 0.7964 [0.7832, 0.8118] | 0.1198 [0.1165, 0.1240] | n/a |
+| `dualfull_merge` | 2 full scans, classical avg (NEX=2) | 2 | 512 | 256 | 100% | 0.8778 [0.8689, 0.8870] | 0.0986 [0.0936, 0.1034] | n/a |
+| `dualfull_ft` | 2 full scans, xview-FT | 2 | 512 | 256 | 100% | 0.7586 [0.7439, 0.7748] | 0.1425 [0.1361, 0.1496] | n/a |
 
 **Answer: yes against the same reconstruction method, no against the best one.** `comp4_ft` (4x complementary, 81% coverage) beats `full_diffusion` (the *same* diffusion reconstruction given a complete measurement) on both metrics: +0.007 SSIM (65% of subjects) and -0.014 NRMSE (95%). Four cheap complementary scans genuinely substitute for one full scan. But both lose on SSIM to `full_plain`, a plain linear recon of the full scan (`full_diffusion` - `full_plain` = -0.039, plain wins 90%): **the diffusion prior hurts on well-sampled data**.
 
@@ -118,6 +120,17 @@ _Note: the redundant "joint likelihood, original prior" methods (old M4/M8/M10/M
   At 4 views `fcomp4` reaches **full coverage** — a complete k-space assembled from 4 disjoint cheap scans. The two comparisons below ask whether that equals one full scan (same coverage, same per-line single-rep noise, but 4 independent acquisitions stitched vs 1 monolithic):
 - **4x disjoint cheap scans vs 1 full scan (both diffusion)** (fcomp4_ft - full_diffusion): **-0.0018** SSIM [-0.0056, +0.0022], fcomp4_ft wins on 35% of 20 subjects.
 - **4x disjoint cheap scans vs 1 full scan (both plain/merge)** (fcomp4_merge - full_plain): **-0.0314** SSIM [-0.0428, -0.0181], fcomp4_merge wins on 10% of 20 subjects.
+
+### Two full acquisitions (low-field NEX=2): the true reconstruction ceiling
+
+Two *complete* k-space acquisitions of the same slice (512 lines), the realistic low-field multi-average scenario. `dualfull_merge` is the classical noise-weighted average (= (y0+y1)/2 at σ/√2, plain recon); `dualfull_ft` is the learned cross-view fine-tuned joint reconstruction over both full views.
+
+- **NEX=2 classical average vs NEX=1 (both plain)** (dualfull_merge - full_plain): **+0.0814** SSIM [+0.0722, +0.0899], dualfull_merge wins on 100% of 20 subjects.
+  Isolates the pure √2 SNR benefit of a second full acquisition under identical (classical) reconstruction — the honest low-field quality ceiling.
+- **learned xview-FT vs classical average, same 2 full views** (dualfull_ft - dualfull_merge): **-0.1192** SSIM [-0.1312, -0.1055], dualfull_ft wins on 0% of 20 subjects.
+- **learned on 2 full views vs classical on 1 full view** (dualfull_ft - full_plain): **-0.0378** SSIM [-0.0506, -0.0233], dualfull_ft wins on 10% of 20 subjects.
+
+**This is the study's sharpest result.** `dualfull_merge` (classical NEX=2 average) scores **0.878 SSIM / 0.099 NRMSE — the best of any method here by a wide margin**, +0.081 over a single full scan on 100% of subjects: at low field, a second full acquisition is worth far more than any reconstruction cleverness. And the learned method **fails this test decisively** — `dualfull_ft` (0.759) *loses to the classical average by 0.119 SSIM* and gains essentially nothing over `full_diffusion` (+0.001), i.e. it extracts almost no value from the second full acquisition. Once coverage is complete, the diffusion prior is not just unhelpful but a large net negative vs plain averaging. The learned pipeline earns its keep **only in the undersampled regime**; the honest low-field reconstruction ceiling is classical multi-average.
 
 ### Cross-view fine-tuning (the contribution) vs the merge baseline
 
@@ -176,6 +189,7 @@ Retained per runbook 9.4 — negative results are results.
 
 - **0.3 T low-field, not <0.1 T ultra-low-field.** No ultra-low-field claim is made.
 - **Sharing the ACS beats maximising coverage past a point.** The fully-complementary design (`fcomp*`, split ACS, no overlap) buys more coverage per line than the shared-ACS complementary design (`comp*`), but loses the √V noise averaging in the k-space centre. At 2 views this is a wash (+0.004 SSIM for the +6% coverage); at 4 views `comp4` (81%, √4 centre averaging) **beats** `fcomp4` (100%, no averaging) by +0.008 SSIM despite covering less k-space. Low-frequency SNR is worth more than the last columns of coverage.
+- **Classical multi-average is the true low-field ceiling; the learned method loses badly to it.** Two full acquisitions averaged (`dualfull_merge`, NEX=2) score 0.878 SSIM — the best in the study, +0.081 over one full scan. The learned reconstruction on the same two full views (`dualfull_ft`, 0.759) trails it by **0.119 SSIM** and gains ≈0 over single-full diffusion. With complete coverage, the diffusion prior is a large net negative vs plain averaging; the learned pipeline is only valuable when undersampled.
 - **Four disjoint cheap scans reach a full scan's coverage but not its quality.** `fcomp4` assembles a complete k-space from 4 disjoint R=4 scans (same coverage and same per-line single-rep noise as `full_plain`), yet trails it by -0.031 SSIM / -0.011 NRMSE — the cost of stitching 4 independently-acquired sub-scans (inter-scan motion/phase drift), not undersampling. It does beat `full_diffusion` (+0.007 SSIM), so it is a viable full-scan substitute when only a plain recon of the real full scan is unavailable.
 - **Joint likelihood == analytic merging** for aligned views at identical masks, as theory predicts. The multi-view contribution is not in the summation. (This is why the redundant original-prior joint methods were removed; each family keeps one merge representative plus the fine-tuned method.)
 - **Cross-view fine-tuning is worth ~0 above 40% coverage** and only ~+0.01 in the sparse regime. It is also a short (0.02 Mimg) empirical self-supervised adaptation and does **not** inherit the Ambient Diffusion identifiability theorem.

@@ -85,6 +85,12 @@ def build_conditions(H, W, cfg, rng):
     quad = np.stack([cols_to_mask(r4_cols, H, W)] * 4, axis=0)               # [4,1,H,W]
     # one complete k-space measurement (R=1), the comparison target
     full = np.stack([np.ones((1, H, W), dtype=np.float32)], axis=0)          # [1,1,H,W]
+    # TWO complete measurements of the same slice (realistic low-field NEX=2):
+    # both views fully sampled -> merge == classical average (sigma/sqrt2), or joint
+    # xview-FT. Deterministic (all-ones), consumes no rng, so existing conditions
+    # stay bit-identical.
+    dual_full = np.stack([np.ones((1, H, W), dtype=np.float32),
+                          np.ones((1, H, W), dtype=np.float32)], axis=0)     # [2,1,H,W]
     acs_mask = cols_to_mask(acs, H, W)
 
     # --- COMPLEMENTARY extra-repetition designs -------------------------------
@@ -164,6 +170,7 @@ def build_conditions(H, W, cfg, rng):
         "joint_quad_comp": torch.from_numpy(quad_comp),
         "joint_extra_fullcomp": torch.from_numpy(extra_fullcomp),
         "joint_quad_fullcomp": torch.from_numpy(quad_fullcomp),
+        "dual_full": torch.from_numpy(dual_full),
     }
     return conditions, torch.from_numpy(acs_mask), counts
 

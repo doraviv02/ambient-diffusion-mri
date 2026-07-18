@@ -252,7 +252,8 @@ def main():
         L.append("This set answers the budget question directly: **with the same 256 lines a full "
                  "scan costs, can four cheap R=4 scans surpass one complete measurement?**\n")
         results_table(quad_t, ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
-                               "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain"], L)
+                               "fcomp4_merge", "fcomp4_ft", "full_diffusion", "full_plain",
+                               "dualfull_merge", "dualfull_ft"], L)
         L.append("**Answer: yes against the same reconstruction method, no against the best one.** "
                  "`comp4_ft` (4x complementary, 81% coverage) beats `full_diffusion` (the *same* "
                  "diffusion reconstruction given a complete measurement) on both metrics: +0.007 SSIM "
@@ -305,6 +306,29 @@ def main():
         L.append(cmp_line(quad_t, "fcomp4_ft", "full_diffusion", "4x disjoint cheap scans vs 1 full scan (both diffusion)"))
         L.append(cmp_line(quad_t, "fcomp4_merge", "full_plain", "4x disjoint cheap scans vs 1 full scan (both plain/merge)"))
     L.append("")
+    if quad_t is not None and quad_t.has("dualfull_merge"):
+        L.append("### Two full acquisitions (low-field NEX=2): the true reconstruction ceiling\n")
+        L.append("Two *complete* k-space acquisitions of the same slice (512 lines), the realistic "
+                 "low-field multi-average scenario. `dualfull_merge` is the classical noise-weighted "
+                 "average (= (y0+y1)/2 at σ/√2, plain recon); `dualfull_ft` is the learned cross-view "
+                 "fine-tuned joint reconstruction over both full views.\n")
+        L.append(cmp_line(quad_t, "dualfull_merge", "full_plain", "NEX=2 classical average vs NEX=1 (both plain)"))
+        L.append("  Isolates the pure √2 SNR benefit of a second full acquisition under identical "
+                 "(classical) reconstruction — the honest low-field quality ceiling.")
+        L.append(cmp_line(quad_t, "dualfull_ft", "dualfull_merge", "learned xview-FT vs classical average, same 2 full views"))
+        L.append(cmp_line(quad_t, "dualfull_ft", "full_plain", "learned on 2 full views vs classical on 1 full view"))
+        L.append("")
+        L.append("**This is the study's sharpest result.** `dualfull_merge` (classical NEX=2 average) "
+                 "scores **0.878 SSIM / 0.099 NRMSE — the best of any method here by a wide margin**, "
+                 "+0.081 over a single full scan on 100% of subjects: at low field, a second full "
+                 "acquisition is worth far more than any reconstruction cleverness. And the learned "
+                 "method **fails this test decisively** — `dualfull_ft` (0.759) *loses to the classical "
+                 "average by 0.119 SSIM* and gains essentially nothing over `full_diffusion` (+0.001), "
+                 "i.e. it extracts almost no value from the second full acquisition. Once coverage is "
+                 "complete, the diffusion prior is not just unhelpful but a large net negative vs "
+                 "plain averaging. The learned pipeline earns its keep **only in the undersampled "
+                 "regime**; the honest low-field reconstruction ceiling is classical multi-average.")
+        L.append("")
     L.append("### Cross-view fine-tuning (the contribution) vs the merge baseline\n")
     L.append(cmp_line(main_t, "fixed_split_ft", "fixed_split_merge", "Cross-view FT, 19% coverage"))
     L.append(cmp_line(main_t, "dup2_ft", "dup2_merge", "Cross-view FT, 25% coverage"))
@@ -382,6 +406,13 @@ def main():
              "views `comp4` (81%, √4 centre averaging) **beats** `fcomp4` (100%, no averaging) by "
              "+0.008 SSIM despite covering less k-space. Low-frequency SNR is worth more than the "
              "last columns of coverage.")
+    L.append("- **Classical multi-average is the true low-field ceiling; the learned method loses "
+             "badly to it.** Two full acquisitions averaged (`dualfull_merge`, NEX=2) score 0.878 "
+             "SSIM — the best in the study, +0.081 over one full scan. The learned reconstruction on "
+             "the same two full views (`dualfull_ft`, 0.759) trails it by **0.119 SSIM** and gains "
+             "≈0 over single-full diffusion. With complete coverage, the diffusion prior is a large "
+             "net negative vs plain averaging; the learned pipeline is only valuable when "
+             "undersampled.")
     L.append("- **Four disjoint cheap scans reach a full scan's coverage but not its quality.** "
              "`fcomp4` assembles a complete k-space from 4 disjoint R=4 scans (same coverage and "
              "same per-line single-rep noise as `full_plain`), yet trails it by -0.031 SSIM / "
