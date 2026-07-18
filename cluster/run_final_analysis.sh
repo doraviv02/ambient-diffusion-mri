@@ -31,6 +31,8 @@ python analysis/plot_mask_design.py --masks-root "$QUAD_MASKS" \
   --output figures/mvp/mask_design_all.png
 python analysis/plot_results_tables.py --summary tables/mvp/summary_metrics.csv \
   --summary-quad tables/mvp/summary_metrics_quad.csv --output-dir figures/mvp
+python analysis/plot_recon_montage_tables.py --final "$FINAL" --final-quad "$FINAL_QUAD" \
+  --output-dir figures/mvp --cases 3
 
 # per-set montages / boxplots
 python analysis/plot_reconstructions.py --results-root "$FINAL" --output-dir figures/mvp

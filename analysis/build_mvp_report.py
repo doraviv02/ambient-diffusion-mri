@@ -354,6 +354,10 @@ def main():
                                   "and NRMSE bars with 95% CI, coloured by design"),
             ("results_4view.png", "the 4-view result table as SSIM and NRMSE bars with 95% CI "
                                   "(the budget question, incl. dualfull NEX=2)"),
+            ("recon_montage_2view.png", "reconstructed IMAGES per 2-view table (columns = the table's "
+                                        "methods, coloured by design; 3 example slices)"),
+            ("recon_montage_4view.png", "reconstructed IMAGES for the 4-view table (single_r4 -> full "
+                                        "scan -> NEX=2); dualfull_merge is visibly the cleanest"),
         ]),
         ("Cross-experiment (the conclusions)", [
             ("experiment_overview.png", "SSIM vs unique k-space coverage, all methods, both sets "

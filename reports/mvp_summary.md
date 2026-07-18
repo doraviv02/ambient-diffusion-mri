@@ -152,6 +152,8 @@ Two *complete* k-space acquisitions of the same slice (512 lines), the realistic
 
 - `figures/mvp/results_2view.png` -- the two 2-view result tables (fixed budget; 2x budget) as SSIM and NRMSE bars with 95% CI, coloured by design
 - `figures/mvp/results_4view.png` -- the 4-view result table as SSIM and NRMSE bars with 95% CI (the budget question, incl. dualfull NEX=2)
+- `figures/mvp/recon_montage_2view.png` -- reconstructed IMAGES per 2-view table (columns = the table's methods, coloured by design; 3 example slices)
+- `figures/mvp/recon_montage_4view.png` -- reconstructed IMAGES for the 4-view table (single_r4 -> full scan -> NEX=2); dualfull_merge is visibly the cleanest
 
 **Cross-experiment (the conclusions)**
 
