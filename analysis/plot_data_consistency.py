@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from analysis.plot_common import load_results, METHOD_LABELS
 
-CURVE_METHODS = ["M2", "M3", "M4", "M5"]
+CURVE_METHODS = ["single_r4", "fixed_split_merge", "fixed_split_ft", "dup2_ft"]
 
 
 def main():

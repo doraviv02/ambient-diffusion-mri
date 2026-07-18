@@ -26,7 +26,7 @@ import matplotlib.patheffects as pe
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from analysis.experiments import EXPERIMENTS, DESIGN_COLORS, design_of, methods_for
 
-MARKERS = {"single": "o", "merge": "s", "joint": "^"}
+MARKERS = {"single": "o", "merge": "s", "ft": "^", "plain": "D"}
 DESIGN_LABEL = {
     "fixed": "fixed budget (split one scan)",
     "1x": "one cheap scan",
@@ -93,14 +93,14 @@ def fig_overview(main, quad, out):
 
     # annotate the two big design jumps
     a = axes[0]
-    y6, y13 = subj_mean(main, "M6"), subj_mean(main, "M13")
+    y6, y13 = subj_mean(main, "dup2_ft"), subj_mean(main, "comp2_ft")
     if y6 and y13:
         a.annotate("", xy=(43.8, y13), xytext=(25, y6),
                    arrowprops=dict(arrowstyle="->", lw=2.4, color="#2a7f3f"))
         a.text(34, (y6 + y13) / 2 + 0.008, f"same 128 lines\n+{y13-y6:.3f} SSIM",
                color="#2a7f3f", fontsize=10, fontweight="bold", ha="center")
     b = axes[1]
-    y9, y16, yMF = subj_mean(quad, "M9"), subj_mean(quad, "M16"), subj_mean(quad, "MF")
+    y9, y16, yMF = subj_mean(quad, "dup4_ft"), subj_mean(quad, "comp4_ft"), subj_mean(quad, "full_plain")
     if y9 and y16:
         b.annotate("", xy=(81.2, y16), xytext=(25, y9),
                    arrowprops=dict(arrowstyle="->", lw=2.4, color="#2a7f3f"))
@@ -108,13 +108,13 @@ def fig_overview(main, quad, out):
                color="#2a7f3f", fontsize=10, fontweight="bold", ha="center")
     if yMF:
         b.axhline(yMF, ls="--", color="#c44e52", lw=1.5, alpha=0.8)
-        b.text(24, yMF - 0.007, "ceiling: one full scan, plain recon (MF)",
+        b.text(24, yMF - 0.007, "ceiling: one full scan, plain recon (full_plain)",
                color="#c44e52", fontsize=9, va="top")
 
     handles = [plt.Line2D([], [], marker="o", ls="", color=DESIGN_COLORS[k], ms=11,
                           label=DESIGN_LABEL[k]) for k in ["1x", "fixed", "dup", "comp", "full"]]
     handles += [plt.Line2D([], [], marker=MARKERS[k], ls="", color="gray", ms=11,
-                           label=f"{k} combiner") for k in ["single", "merge", "joint"]]
+                           label=f"{k}") for k in ["single", "merge", "ft", "plain"]]
     handles += [plt.Line2D([], [], marker="o", ls="", mfc="white", mec="black", mew=2, ms=11,
                            label="cross-view fine-tuned")]
     fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False, fontsize=9)
@@ -133,23 +133,18 @@ def fig_overview(main, quad, out):
 def fig_forest(main, quad, out):
     rows = []  # (label, result, group)
     D, M = "acquisition design", "reconstruction method"
-    for a, b, lab in [("M13", "M6", "COMP vs dup, 2x, fine-tuned"),
-                      ("M14", "M8", "COMP vs dup, 2x, joint"),
-                      ("M15", "M7", "COMP vs dup, 2x, merged")]:
-        rows.append((lab, paired(main, a, b), D))
-    rows.append(("COMP vs dup, 4x", paired(quad, "M16", "M9"), D))
-    rows.append(("extra cheap repetition (M7-M2)", paired(main, "M7", "M2"), D))
-    rows.append(("4x COMP vs one full scan, same recon (M16-M12)", paired(quad, "M16", "M12"), D))
+    rows.append(("COMP vs dup, 2x, fine-tuned", paired(main, "comp2_ft", "dup2_ft"), D))
+    rows.append(("COMP vs dup, 2x, merged", paired(main, "comp2_merge", "dup2_merge"), D))
+    rows.append(("COMP vs dup, 4x", paired(quad, "comp4_ft", "dup4_ft"), D))
+    rows.append(("extra cheap repetition (dup2-single)", paired(main, "dup2_merge", "single_r4"), D))
+    rows.append(("4x COMP vs one full scan, same recon", paired(quad, "comp4_ft", "full_diffusion"), D))
 
-    for a, b, lab in [("M5", "M4", "cross-view FT @ 19% coverage"),
-                      ("M6", "M8", "cross-view FT @ 25% coverage"),
-                      ("M13", "M14", "cross-view FT @ 44% coverage")]:
-        rows.append((lab, paired(main, a, b), M))
-    rows.append(("cross-view FT @ 81% coverage", paired(quad, "M16", "M17"), M))
-    rows.append(("joint vs merge, fixed (M4-M3)", paired(main, "M4", "M3"), M))
-    rows.append(("joint vs merge, 2x dup (M8-M7)", paired(main, "M8", "M7"), M))
-    rows.append(("joint vs merge, 2x COMP (M14-M15)", paired(main, "M14", "M15"), M))
-    rows.append(("joint vs merge, 4x COMP (M17-M18)", paired(quad, "M17", "M18"), M))
+    # Cross-view fine-tuning re-anchored to the merge baseline of each family
+    # (merge == the removed original-prior joint, so this is the fine-tuning effect).
+    rows.append(("cross-view FT @ 19% coverage", paired(main, "fixed_split_ft", "fixed_split_merge"), M))
+    rows.append(("cross-view FT @ 25% coverage", paired(main, "dup2_ft", "dup2_merge"), M))
+    rows.append(("cross-view FT @ 44% coverage", paired(main, "comp2_ft", "comp2_merge"), M))
+    rows.append(("cross-view FT @ 81% coverage", paired(quad, "comp4_ft", "comp4_merge"), M))
 
     rows = [r for r in rows if r[1] is not None]
     fig, ax = plt.subplots(figsize=(11, 0.46 * len(rows) + 2.4))
@@ -244,10 +239,12 @@ def fig_budget(main, quad, out):
 # 4. Fine-tuning benefit vs coverage
 # ---------------------------------------------------------------------------
 def fig_ft(main, quad, out):
-    pts = [(0.188, paired(main, "M5", "M4"), "M5-M4"),
-           (0.250, paired(main, "M6", "M8"), "M6-M8"),
-           (0.438, paired(main, "M13", "M14"), "M13-M14"),
-           (0.812, paired(quad, "M16", "M17"), "M16-M17")]
+    # fine-tuning effect vs the merge baseline of each family (merge == removed
+    # original-prior joint, so this measures the cross-view fine-tuning benefit).
+    pts = [(0.188, paired(main, "fixed_split_ft", "fixed_split_merge"), "fixed"),
+           (0.250, paired(main, "dup2_ft", "dup2_merge"), "dup2"),
+           (0.438, paired(main, "comp2_ft", "comp2_merge"), "comp2"),
+           (0.812, paired(quad, "comp4_ft", "comp4_merge"), "comp4")]
     pts = [p for p in pts if p[1] is not None]
     fig, ax = plt.subplots(figsize=(8.4, 5.4))
     xs = [p[0] * 100 for p in pts]

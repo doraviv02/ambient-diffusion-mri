@@ -72,8 +72,8 @@ def main():
         try:
             b = json.load(open(args.budget_json))
             any_split = next(iter(b.values()))
-            budget["M6"] = any_split.get("extra_sum", budget["M6"])  # noqa
-            for m in ["M0", "M1", "M2", "M3", "M4", "M5"]:
+            budget["dup2_ft"] = any_split.get("extra_sum", budget["dup2_ft"])  # noqa
+            for m in ["classical_adjoint", "classical_l1wav", "single_r4", "fixed_split_merge", "fixed_split_ft"]:
                 budget[m] = any_split.get("fixed_sum_dupACS", budget[m])
         except Exception:
             pass

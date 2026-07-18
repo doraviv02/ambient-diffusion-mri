@@ -10,9 +10,13 @@ Paired deltas are bootstrapped over subjects from the per-subject tables.
 import argparse
 import json
 import os
+import sys
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from analysis.experiments import EXPERIMENTS, MAIN_ORDER, QUAD_ORDER  # noqa: E402
 
 
 def _load_json(path):
@@ -30,31 +34,6 @@ def _load_yaml(path):
             return yaml.safe_load(f)
     except Exception:
         return None
-
-
-# method -> (description, views, lines bought, unique columns, coverage)
-METHODS = {
-    "M0":  ("noise-weighted adjoint (classical)",                "merge_fixed",      2, 64,  48,  0.188),
-    "M1":  ("tuned L1-wavelet SENSE (classical)",                "merge_fixed",      2, 64,  48,  0.188),
-    "M2":  ("original prior, single view",                       "single_r4",        1, 64,  64,  0.250),
-    "M3":  ("original prior, analytic merge",                    "merge_fixed",      2, 64,  48,  0.188),
-    "M4":  ("original prior, joint likelihood",                  "joint_fixed",      2, 64,  48,  0.188),
-    "M5":  ("cross-view fine-tuned, joint likelihood",           "joint_fixed",      2, 64,  48,  0.188),
-    "M7":  ("original prior, analytic merge",                    "merge_extra",      2, 128, 64,  0.250),
-    "M8":  ("original prior, joint likelihood",                  "joint_extra",      2, 128, 64,  0.250),
-    "M6":  ("cross-view fine-tuned, joint likelihood",           "joint_extra",      2, 128, 64,  0.250),
-    "M15": ("original prior, analytic merge",                    "merge_extra_comp", 2, 128, 112, 0.438),
-    "M14": ("original prior, joint likelihood",                  "joint_extra_comp", 2, 128, 112, 0.438),
-    "M13": ("cross-view fine-tuned, joint likelihood",           "joint_extra_comp", 2, 128, 112, 0.438),
-    "M11": ("original prior, analytic merge",                    "merge_quad",       4, 256, 64,  0.250),
-    "M10": ("original prior, joint likelihood",                  "joint_quad",       4, 256, 64,  0.250),
-    "M9":  ("cross-view fine-tuned, joint likelihood",           "joint_quad",       4, 256, 64,  0.250),
-    "M18": ("original prior, analytic merge",                    "merge_quad_comp",  4, 256, 208, 0.812),
-    "M17": ("original prior, joint likelihood",                  "joint_quad_comp",  4, 256, 208, 0.812),
-    "M16": ("cross-view fine-tuned, joint likelihood",           "joint_quad_comp",  4, 256, 208, 0.812),
-    "M12": ("original prior, one complete measurement",          "single_full",      1, 256, 256, 1.000),
-    "MF":  ("plain recon, one complete measurement (reference)", "single_full",      1, 256, 256, 1.000),
-}
 
 
 class Table:
@@ -108,13 +87,13 @@ def cmp_line(tab, a, b, label, col="ssim"):
 
 
 def results_table(tab, methods, L):
-    L.append("| Method | Views | Lines | Unique cols | Coverage | Prior / combiner | SSIM | NRMSE | Held-out k err |")
+    L.append("| Method | Description | Views | Lines | Unique cols | Coverage | SSIM | NRMSE | Held-out k err |")
     L.append("|---|---|---|---|---|---|---|---|---|")
     for m in methods:
         if not tab.has(m):
             continue
-        d, cond, v, lines, uniq, cov = METHODS[m]
-        L.append(f"| {m} | {v} | {lines} | {uniq} | {cov:.0%} | {d} | "
+        e = EXPERIMENTS[m]
+        L.append(f"| `{m}` | {e.label} | {e.views} | {e.lines} | {e.uniq} | {e.cov:.0%} | "
                  f"{tab.fmt(m,'ssim')} | {tab.fmt(m,'nrmse')} | {tab.fmt(m,'heldout_kspace_err')} |")
     L.append("")
 
@@ -154,20 +133,21 @@ def main():
     L.append("**Acquisition design dominates reconstruction method.** Changing *which* k-space lines "
              "the repeated scans measure — complementary instead of duplicated, at an identical "
              "line budget — is worth **+0.04 to +0.06 SSIM**. Every reconstruction-method choice in "
-             "this study (learned prior vs original, cross-view fine-tuning, joint likelihood vs "
-             "analytic merge) is worth **0.00 to +0.01**. Design beats method by roughly 5-10x.\n")
+             "this study (learned prior vs classical, cross-view fine-tuning) is worth **0.00 to "
+             "+0.01**. Design beats method by roughly 5-10x.\n")
     L.append("Two consequences worth stating plainly:\n")
     L.append("- The project's nominal contribution (cross-view fine-tuning) only pays off in the "
-             "**sparse** regime, and decays monotonically as coverage grows: +0.010 SSIM at 19% "
-             "coverage (M5-M4), +0.003 at 25% (M6-M8), then **statistically zero** at 44% (M13-M14) "
-             "and 81% (M16-M17). Once coverage is adequate the data determines the image and "
-             "prior/combiner choices wash out. See `figures/mvp/finetuning_vs_coverage.png`.")
+             "**sparse** regime, and decays monotonically as coverage grows: +0.008 SSIM at 19% "
+             "coverage (`fixed_split_ft`-`fixed_split_merge`), +0.009 at 25% (`dup2_ft`-`dup2_merge`), "
+             "then **statistically zero** at 44% (`comp2_ft`-`comp2_merge`) and 81% "
+             "(`comp4_ft`-`comp4_merge`). Once coverage is adequate the data determines the image and "
+             "prior choices wash out. See `figures/mvp/finetuning_vs_coverage.png`.")
     L.append("- At an equal 256-line budget, **four cheap complementary R=4 scans beat one complete "
-             "measurement when both are reconstructed the same way**: M16 > M12 on SSIM (+0.007, "
-             "65% of subjects) and on NRMSE (-0.014, 95%). They trail a *plain* linear recon of the "
-             "full scan (MF) on SSIM by 0.032, yet are **statistically tied with it on NRMSE** "
-             "(+0.0006, CI [-0.004, +0.005]) — the residual gap is a reconstruction artefact, not "
-             "an acquisition one; see the guidance-scale caveat below.")
+             "measurement when both are reconstructed the same way**: `comp4_ft` > `full_diffusion` "
+             "on SSIM (+0.007, 65% of subjects) and on NRMSE (-0.014, 95%). They trail a *plain* "
+             "linear recon of the full scan (`full_plain`) on SSIM by 0.032, yet are **statistically "
+             "tied with it on NRMSE** (+0.0006, CI [-0.004, +0.005]) — the residual gap is a "
+             "reconstruction artefact, not an acquisition one; see the limitations section.")
     L.append("")
 
     # ---------------- scope ----------------
@@ -249,35 +229,37 @@ def main():
     L.append("## Results: 2-view set (25 subjects, 75 slices)\n")
     L.append("Subject-level mean [95% bootstrap CI]. Grouped by acquisition budget.\n")
     L.append("### Classical baselines and fixed budget (64 lines)\n")
-    results_table(main_t, ["M0", "M1", "M2", "M3", "M4", "M5"], L)
+    results_table(main_t, ["classical_adjoint", "classical_l1wav", "single_r4",
+                           "fixed_split_merge", "fixed_split_ft"], L)
     L.append("At a **fixed** budget, splitting into two views *loses* to spending it on one view "
-             "(M2 - M5 = +0.0125, M2 wins 68%): the duplicated ACS buys 48 unique columns instead of "
-             "64. Multi-view only helps when it buys extra scans, not when it subdivides one.\n")
+             "(`single_r4` - `fixed_split_ft` = +0.0125, single wins 68%): the duplicated ACS buys 48 "
+             "unique columns instead of 64. Multi-view only helps when it buys extra scans, not when "
+             "it subdivides one.\n")
     L.append("### 2x budget (128 lines): duplicated vs COMPLEMENTARY\n")
-    results_table(main_t, ["M7", "M8", "M6", "M15", "M14", "M13"], L)
-    L.append("The three complementary methods (M13/M14/M15, 44% coverage) beat their duplicated "
-             "counterparts (M6/M8/M7, 25% coverage) by +0.041 to +0.052 SSIM on **100% of subjects**, "
-             "at an identical 128-line cost. Within each coverage level the method variants are "
-             "within 0.005 of each other.\n")
+    results_table(main_t, ["dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft"], L)
+    L.append("The complementary methods (`comp2_*`, 44% coverage) beat their duplicated counterparts "
+             "(`dup2_*`, 25% coverage) by +0.041 (fine-tuned) to +0.052 (merged) SSIM on **100% of "
+             "subjects**, at an identical 128-line cost. Within each coverage level the merge and "
+             "fine-tuned variants sit within ~0.01 of each other.\n")
 
     # ---------------- 4-view results ----------------
     if quad_t is not None and not quad_t.summ.empty:
         L.append("## Results: 4-view set (20 subjects, 59 slices)\n")
         L.append("This set answers the budget question directly: **with the same 256 lines a full "
                  "scan costs, can four cheap R=4 scans surpass one complete measurement?**\n")
-        results_table(quad_t, ["M2", "M11", "M10", "M9", "M18", "M17", "M16", "M12", "MF"], L)
+        results_table(quad_t, ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
+                               "full_diffusion", "full_plain"], L)
         L.append("**Answer: yes against the same reconstruction method, no against the best one.** "
-                 "M16 (4x complementary, 81% coverage) beats M12 (the *same* diffusion "
-                 "reconstruction given a complete measurement) on both metrics: +0.007 SSIM (65% of "
-                 "subjects) and -0.014 NRMSE (95%). Four cheap complementary scans genuinely "
-                 "substitute for one full scan. But both lose on SSIM to MF, a plain linear recon of "
-                 "the full scan (M12 - MF = -0.039, MF wins 90%): **the diffusion prior hurts on "
-                 "well-sampled data**. With `l_ss=30` tuned at R=4, guidance keeps injecting prior "
-                 "once the data already determines the image.\n")
-        L.append("Note the metric split for M16 vs MF: -0.032 on SSIM but **+0.0006 on NRMSE, a "
-                 "statistical tie** (CI [-0.004, +0.005]). M16 is as accurate as the full scan in "
-                 "the L2 sense and loses only on *structural* similarity — the signature of a prior "
-                 "adding plausible-but-wrong texture, not of missing information. That makes the "
+                 "`comp4_ft` (4x complementary, 81% coverage) beats `full_diffusion` (the *same* "
+                 "diffusion reconstruction given a complete measurement) on both metrics: +0.007 SSIM "
+                 "(65% of subjects) and -0.014 NRMSE (95%). Four cheap complementary scans genuinely "
+                 "substitute for one full scan. But both lose on SSIM to `full_plain`, a plain linear "
+                 "recon of the full scan (`full_diffusion` - `full_plain` = -0.039, plain wins 90%): "
+                 "**the diffusion prior hurts on well-sampled data**.\n")
+        L.append("Note the metric split for `comp4_ft` vs `full_plain`: -0.032 on SSIM but **+0.0006 "
+                 "on NRMSE, a statistical tie** (CI [-0.004, +0.005]). It is as accurate as the full "
+                 "scan in the L2 sense and loses only on *structural* similarity — the signature of a "
+                 "prior adding plausible-but-wrong texture, not of missing information. That makes the "
                  "residual gap a *reconstruction* deficit, not an acquisition one. We suspected the "
                  "fix was to re-tune the guidance scale `l_ss` (tuned once on sparse data) per "
                  "coverage tier, and **tested it: it does not help** — `l_ss=30` is optimal at every "
@@ -285,54 +267,48 @@ def main():
                  "`figures/mvp/lss_tier_tuning.png` and the limitations section). The gap is intrinsic "
                  "to soft-guidance diffusion sampling vs a direct solve, not a tuning artefact.\n")
         L.append("With the **duplicated** 4x design the same question answered *no* by a wide margin "
-                 "(M9 0.703 vs MF 0.796, -0.093). The acquisition fix (M16 - M9 = +0.061 on 100% of "
-                 "subjects) closes two thirds of that gap. This is the single largest effect measured "
-                 "anywhere in the study.\n")
+                 "(`dup4_ft` 0.703 vs `full_plain` 0.796, -0.093). The acquisition fix "
+                 "(`comp4_ft` - `dup4_ft` = +0.061 on 100% of subjects) closes two thirds of that "
+                 "gap. This is the single largest effect measured anywhere in the study.\n")
 
     # ---------------- key comparisons ----------------
     L.append("## Key comparisons (subject-paired, brain-masked SSIM)\n")
+    L.append("_Note: the redundant \"joint likelihood, original prior\" methods (old M4/M8/M10/M14/"
+             "M17) were removed, since joint == analytic merge for aligned identical-mask views. "
+             "Fine-tuning effects are therefore measured against the **merge** baseline of the same "
+             "acquisition (equivalent, since merge == the removed original-prior joint)._\n")
     L.append("### Acquisition design (the big effects)\n")
-    L.append(cmp_line(main_t, "M13", "M6",  "COMPLEMENTARY vs duplicated, 2x budget, fine-tuned"))
-    L.append(cmp_line(main_t, "M14", "M8",  "COMPLEMENTARY vs duplicated, 2x budget, joint"))
-    L.append(cmp_line(main_t, "M15", "M7",  "COMPLEMENTARY vs duplicated, 2x budget, merged"))
+    L.append(cmp_line(main_t, "comp2_ft", "dup2_ft", "COMPLEMENTARY vs duplicated, 2x budget, fine-tuned"))
+    L.append(cmp_line(main_t, "comp2_merge", "dup2_merge", "COMPLEMENTARY vs duplicated, 2x budget, merged"))
     if quad_t is not None:
-        L.append(cmp_line(quad_t, "M16", "M9", "COMPLEMENTARY vs duplicated, 4x budget"))
-    L.append(cmp_line(main_t, "M7", "M2", "Extra cheap repetition (averaged) vs single view"))
+        L.append(cmp_line(quad_t, "comp4_ft", "dup4_ft", "COMPLEMENTARY vs duplicated, 4x budget"))
+    L.append(cmp_line(main_t, "dup2_merge", "single_r4", "Extra cheap repetition (averaged) vs single view"))
     L.append("  Identical 25% coverage, 2x the lines -> isolates the pure sqrt(2) SNR benefit of "
              "averaging cheap low-field repeats. Real, but half the size of the design effect.")
-    L.append(cmp_line(main_t, "M13", "M2", "Best 2-view design vs single view"))
+    L.append(cmp_line(main_t, "comp2_ft", "single_r4", "Best 2-view design vs single view"))
     L.append("")
-    L.append("### Reconstruction method (the small effects)\n")
-    L.append(cmp_line(main_t, "M5", "M4", "Cross-view fine-tuning vs original prior, 19% coverage"))
-    L.append(cmp_line(main_t, "M6", "M8", "Cross-view fine-tuning, 25% coverage"))
-    L.append(cmp_line(main_t, "M13", "M14", "Cross-view fine-tuning, 44% coverage"))
+    L.append("### Cross-view fine-tuning (the contribution) vs the merge baseline\n")
+    L.append(cmp_line(main_t, "fixed_split_ft", "fixed_split_merge", "Cross-view FT, 19% coverage"))
+    L.append(cmp_line(main_t, "dup2_ft", "dup2_merge", "Cross-view FT, 25% coverage"))
+    L.append(cmp_line(main_t, "comp2_ft", "comp2_merge", "Cross-view FT, 44% coverage"))
     if quad_t is not None:
-        L.append(cmp_line(quad_t, "M16", "M17", "Cross-view fine-tuning, 81% coverage"))
-    L.append("  The fine-tuning benefit **decays to zero as coverage grows** — it is a sparse-regime "
-             "effect only.")
-    L.append("")
-    L.append(cmp_line(main_t, "M4", "M3", "Joint likelihood vs analytic merge, fixed budget"))
-    L.append(cmp_line(main_t, "M8", "M7", "Joint likelihood vs analytic merge, 2x duplicated"))
-    L.append(cmp_line(main_t, "M14", "M15", "Joint likelihood vs analytic merge, 2x complementary"))
-    if quad_t is not None:
-        L.append(cmp_line(quad_t, "M10", "M11", "Joint likelihood vs analytic merge, 4x duplicated"))
-        L.append(cmp_line(quad_t, "M17", "M18", "Joint likelihood vs analytic merge, 4x complementary"))
-    L.append("  For aligned views with identical masks, theory predicts **equivalence**, and that is "
-             "what we see (|delta| < 0.006) — *except* at 4x duplicated (M10 - M11 = +0.043), which "
-             "is an artefact of the guidance-scale confound below, not a real advantage.")
+        L.append(cmp_line(quad_t, "comp4_ft", "comp4_merge", "Cross-view FT, 81% coverage"))
+    L.append("  The fine-tuning benefit **decays to zero as coverage grows** (+0.008 at 19-25% "
+             "coverage, ~0 at 44-81%) — it is a sparse-regime effect only.")
     L.append("")
     L.append("### Diffusion vs classical\n")
-    L.append(cmp_line(main_t, "M2", "M1", "Diffusion vs tuned L1-wavelet SENSE"))
-    L.append(cmp_line(main_t, "M2", "M0", "Diffusion vs noise-weighted adjoint"))
+    L.append(cmp_line(main_t, "single_r4", "classical_l1wav", "Diffusion vs tuned L1-wavelet SENSE"))
+    L.append(cmp_line(main_t, "single_r4", "classical_adjoint", "Diffusion vs noise-weighted adjoint"))
     L.append("  The learned prior is worth ~+0.10 SSIM over classical baselines in the sparse regime "
-             "— the one place where the prior axis is large. It reverses at full sampling (M12 < MF).")
+             "— the one place where the prior axis is large. It reverses at full sampling "
+             "(`full_diffusion` < `full_plain`).")
     L.append("")
 
     # ---------------- figures ----------------
     L.append("## Figures\n")
     groups = [
         ("Cross-experiment (the conclusions)", [
-            ("experiment_overview.png", "SSIM vs unique k-space coverage, all 20 methods, both sets "
+            ("experiment_overview.png", "SSIM vs unique k-space coverage, all methods, both sets "
                                         "-- the headline: coverage separates, method does not"),
             ("effect_sizes_forest.png", "every paired comparison with 95% CI, split into acquisition "
                                         "design vs reconstruction method"),
@@ -363,7 +339,7 @@ def main():
         ]),
         ("Uncertainty and tuning", [
             ("lss_tier_tuning.png", "per-coverage-tier l_ss retune on validation -- l_ss=30 is "
-                                    "optimal at every tier, so the M12<MF gap is not a tuning artefact"),
+                                    "optimal at every tier, so the full_diffusion<full_plain gap is not a tuning artefact"),
             ("uncertainty_examples.png", "per-pixel posterior std over seeds"),
             ("uncertainty_calibration.png", "|error| vs predicted std"),
             ("validation_grid.png", "original global l_ss / num_steps / likelihood tuning on validation"),
@@ -382,11 +358,14 @@ def main():
     L.append("Retained per runbook 9.4 — negative results are results.\n")
     L.append("- **0.3 T low-field, not <0.1 T ultra-low-field.** No ultra-low-field claim is made.")
     L.append("- **Joint likelihood == analytic merging** for aligned views at identical masks, as "
-             "theory predicts. The multi-view contribution is not in the summation.")
+             "theory predicts. The multi-view contribution is not in the summation. (This is why the "
+             "redundant original-prior joint methods were removed; each family keeps one merge "
+             "representative plus the fine-tuned method.)")
     L.append("- **Cross-view fine-tuning is worth ~0 above 40% coverage** and only ~+0.01 in the "
              "sparse regime. It is also a short (0.02 Mimg) empirical self-supervised adaptation and "
              "does **not** inherit the Ambient Diffusion identifiability theorem.")
-    L.append("- **The diffusion prior hurts on well-sampled data** (M12 < MF on 90% of subjects), "
+    L.append("- **The diffusion prior hurts on well-sampled data** (`full_diffusion` < `full_plain` "
+             "on 90% of subjects), "
              "and this is **not** a guidance-tuning artefact. We re-tuned `l_ss` per coverage tier "
              "on validation (held-out k-space error, test untouched): `l_ss=30` is optimal at every "
              "tier, and raising it on the dense tier *lowers* SSIM (0.642 -> 0.513 by l_ss=300) "

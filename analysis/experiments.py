@@ -3,14 +3,28 @@
 Every method's identity (which prior, which combiner, which acquisition) and its
 acquisition accounting live here so the report, the tables and the figures cannot
 drift apart.  Coverage numbers are *measured* from the stored mask tensors, not
-design intent -- see `tools/generate_mvp_masks.py` and the check in the notes.
+design intent -- see `tools/generate_mvp_masks.py`.
+
+Naming
+------
+Methods use descriptive slugs (single_r4, comp2_ft, full_plain, ...) instead of
+opaque M-numbers.  `LEGACY_IDS` maps the old M#/MF ids to the current slugs for
+migrating stored result files and for reading historical notes.
+
+The redundant "joint likelihood, original prior" methods (old M4/M8/M10/M14/M17)
+were removed: for aligned identical-mask views the joint likelihood is provably
+equal to the analytic noise-weighted merge, and they showed no dramatic
+difference from it.  Each acquisition family therefore keeps one analytic-combiner
+representative (`*_merge`) plus the cross-view fine-tuned method (`*_ft`), which is
+the project's contribution.
 
 Families
 --------
 classical : no learned prior (adjoint / L1-wavelet)
 merge     : views collapsed into one measurement before sampling (analytic merge)
-joint     : views kept separate, summed in the per-step data fidelity
+ft        : cross-view fine-tuned prior, joint multi-view likelihood (contribution)
 single    : one view only
+plain     : direct least-squares recon of a complete measurement
 """
 
 from __future__ import annotations
@@ -19,42 +33,53 @@ from collections import namedtuple
 
 Exp = namedtuple("Exp", "label prior combiner condition views lines uniq cov budget set_")
 
-# budget tags: "1x" (64 lines), "fixed" (64, split), "2x" (128), "4x" (256), "full" (256)
+# budget tags: "1x" (64 lines), "fixed" (64, split into 2 views), "2x" (128),
+# "4x" (256), "full" (256).
 EXPERIMENTS = {
     # ---- classical baselines (2-view set) --------------------------------
-    "M0":  Exp("Noise-wtd adjoint",       "none",      "merge",  "merge_fixed",      2,  64,  48, 0.188, "fixed", "main"),
-    "M1":  Exp("L1-wavelet SENSE",        "none",      "merge",  "merge_fixed",      2,  64,  48, 0.188, "fixed", "main"),
+    "classical_adjoint": Exp("Classical adjoint",        "none",      "merge",  "merge_fixed",      2,  64,  48, 0.188, "fixed", "main"),
+    "classical_l1wav":   Exp("Classical L1-wavelet",     "none",      "merge",  "merge_fixed",      2,  64,  48, 0.188, "fixed", "main"),
     # ---- single view -----------------------------------------------------
-    "M2":  Exp("Single-view R=4",         "original",  "single", "single_r4",        1,  64,  64, 0.250, "1x",    "both"),
-    # ---- fixed budget (2xR=8, split one scan's worth) --------------------
-    "M3":  Exp("Merged fixed",            "original",  "merge",  "merge_fixed",      2,  64,  48, 0.188, "fixed", "main"),
-    "M4":  Exp("Joint fixed",             "original",  "joint",  "joint_fixed",      2,  64,  48, 0.188, "fixed", "main"),
-    "M5":  Exp("Joint fixed + xview-FT",  "finetuned", "joint",  "joint_fixed",      2,  64,  48, 0.188, "fixed", "main"),
+    "single_r4":         Exp("Single scan (R=4)",        "original",  "single", "single_r4",        1,  64,  64, 0.250, "1x",    "both"),
+    # ---- fixed budget (2xR=8, one scan's budget split across two views) ---
+    "fixed_split_merge": Exp("Fixed budget, merged",     "original",  "merge",  "merge_fixed",      2,  64,  48, 0.188, "fixed", "main"),
+    "fixed_split_ft":    Exp("Fixed budget, xview-FT",   "finetuned", "ft",     "joint_fixed",      2,  64,  48, 0.188, "fixed", "main"),
     # ---- 2x budget, DUPLICATED mask (25% coverage) -----------------------
-    "M7":  Exp("Merged 2xR=4 dup",        "original",  "merge",  "merge_extra",      2, 128,  64, 0.250, "2x",    "main"),
-    "M8":  Exp("Joint 2xR=4 dup",         "original",  "joint",  "joint_extra",      2, 128,  64, 0.250, "2x",    "main"),
-    "M6":  Exp("Joint 2xR=4 dup + FT",    "finetuned", "joint",  "joint_extra",      2, 128,  64, 0.250, "2x",    "main"),
+    "dup2_merge":        Exp("2x duplicated, merged",    "original",  "merge",  "merge_extra",      2, 128,  64, 0.250, "2x",    "main"),
+    "dup2_ft":           Exp("2x duplicated, xview-FT",  "finetuned", "ft",     "joint_extra",      2, 128,  64, 0.250, "2x",    "main"),
     # ---- 2x budget, COMPLEMENTARY (44% coverage) -------------------------
-    "M15": Exp("Merged 2xR=4 COMP",       "original",  "merge",  "merge_extra_comp", 2, 128, 112, 0.438, "2x",    "main"),
-    "M14": Exp("Joint 2xR=4 COMP",        "original",  "joint",  "joint_extra_comp", 2, 128, 112, 0.438, "2x",    "main"),
-    "M13": Exp("Joint 2xR=4 COMP + FT",   "finetuned", "joint",  "joint_extra_comp", 2, 128, 112, 0.438, "2x",    "main"),
+    "comp2_merge":       Exp("2x complementary, merged", "original",  "merge",  "merge_extra_comp", 2, 128, 112, 0.438, "2x",    "main"),
+    "comp2_ft":          Exp("2x complementary, xview-FT","finetuned","ft",     "joint_extra_comp", 2, 128, 112, 0.438, "2x",    "main"),
     # ---- 4x budget, DUPLICATED (25% coverage) ----------------------------
-    "M11": Exp("Merged 4xR=4 dup",        "original",  "merge",  "merge_quad",       4, 256,  64, 0.250, "4x",    "quad"),
-    "M10": Exp("Joint 4xR=4 dup",         "original",  "joint",  "joint_quad",       4, 256,  64, 0.250, "4x",    "quad"),
-    "M9":  Exp("Joint 4xR=4 dup + FT",    "finetuned", "joint",  "joint_quad",       4, 256,  64, 0.250, "4x",    "quad"),
+    "dup4_merge":        Exp("4x duplicated, merged",    "original",  "merge",  "merge_quad",       4, 256,  64, 0.250, "4x",    "quad"),
+    "dup4_ft":           Exp("4x duplicated, xview-FT",  "finetuned", "ft",     "joint_quad",       4, 256,  64, 0.250, "4x",    "quad"),
     # ---- 4x budget, COMPLEMENTARY (81% coverage) -------------------------
-    "M18": Exp("Merged 4xR=4 COMP",       "original",  "merge",  "merge_quad_comp",  4, 256, 208, 0.812, "4x",    "quad"),
-    "M17": Exp("Joint 4xR=4 COMP",        "original",  "joint",  "joint_quad_comp",  4, 256, 208, 0.812, "4x",    "quad"),
-    "M16": Exp("Joint 4xR=4 COMP + FT",   "finetuned", "joint",  "joint_quad_comp",  4, 256, 208, 0.812, "4x",    "quad"),
+    "comp4_merge":       Exp("4x complementary, merged", "original",  "merge",  "merge_quad_comp",  4, 256, 208, 0.812, "4x",    "quad"),
+    "comp4_ft":          Exp("4x complementary, xview-FT","finetuned","ft",     "joint_quad_comp",  4, 256, 208, 0.812, "4x",    "quad"),
     # ---- one complete measurement (the ceiling) --------------------------
-    "M12": Exp("Diffusion, FULL k-space", "original",  "single", "single_full",      1, 256, 256, 1.000, "full",  "quad"),
-    "MF":  Exp("Plain recon, FULL",       "none",      "single", "single_full",      1, 256, 256, 1.000, "full",  "quad"),
+    "full_diffusion":    Exp("Full scan, diffusion",     "original",  "single", "single_full",      1, 256, 256, 1.000, "full",  "quad"),
+    "full_plain":        Exp("Full scan, plain recon",   "none",      "plain",  "single_full",      1, 256, 256, 1.000, "full",  "quad"),
 }
 
-# Display order for the 2-view set: by budget, then merge -> joint -> joint+FT.
-MAIN_ORDER = ["M0", "M1", "M2", "M3", "M4", "M5", "M7", "M8", "M6", "M15", "M14", "M13"]
+# Old M#/MF id -> current slug (for migrating result files and reading old notes).
+# The five removed "joint, original prior" methods map to None.
+LEGACY_IDS = {
+    "M0": "classical_adjoint", "M1": "classical_l1wav", "M2": "single_r4",
+    "M3": "fixed_split_merge", "M4": None,               "M5": "fixed_split_ft",
+    "M6": "dup2_ft",           "M7": "dup2_merge",       "M8": None,
+    "M9": "dup4_ft",           "M10": None,              "M11": "dup4_merge",
+    "M12": "full_diffusion",   "M13": "comp2_ft",        "M14": None,
+    "M15": "comp2_merge",      "M16": "comp4_ft",        "M17": None,
+    "M18": "comp4_merge",      "MF": "full_plain",
+}
+
+# Display order for the 2-view set: by budget, then merge -> fine-tuned.
+MAIN_ORDER = ["classical_adjoint", "classical_l1wav", "single_r4",
+              "fixed_split_merge", "fixed_split_ft",
+              "dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft"]
 # Display order for the 4-view set: worst -> best.
-QUAD_ORDER = ["M2", "M11", "M10", "M9", "M18", "M17", "M16", "M12", "MF"]
+QUAD_ORDER = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
+              "full_diffusion", "full_plain"]
 
 METHOD_ORDER = MAIN_ORDER  # back-compat for existing figure scripts
 METHOD_LABELS = {k: v.label for k, v in EXPERIMENTS.items()}

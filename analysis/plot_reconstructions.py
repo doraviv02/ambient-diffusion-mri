@@ -16,8 +16,10 @@ from analysis.plot_common import (load_results, zero_filled_mag, recon_mag, get_
 
 # Default column order for the 2-view set: classical -> single -> fixed budget ->
 # 2x duplicated -> 2x complementary. Override with --methods for the 4-view set.
-COLUMN_METHODS = ["M1", "M2", "M3", "M4", "M5", "M7", "M8", "M6", "M15", "M14", "M13"]
-QUAD_METHODS = ["M2", "M11", "M10", "M9", "M18", "M17", "M16", "M12", "MF"]
+COLUMN_METHODS = ["classical_l1wav", "single_r4", "fixed_split_merge", "fixed_split_ft",
+                  "dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft"]
+QUAD_METHODS = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
+                "full_diffusion", "full_plain"]
 
 
 def _input_snr(case_methods):
@@ -45,7 +47,7 @@ def pick_cases(res, max_cases=4):
     cases = {}
     for (method, subj, sl, seed), d in res.items():
         cases.setdefault((subj, sl), {})[method] = d
-    core = ["M2", "M4"]
+    core = ["single_r4", "comp2_ft"]
     good = {k: v for k, v in cases.items() if all(m in v for m in core)}
     if not good:
         good = cases

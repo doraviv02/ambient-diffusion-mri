@@ -64,7 +64,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=None, help="selected_classical.yaml (for M1 lambda)")
     ap.add_argument("--manifest", required=True)
-    ap.add_argument("--methods", default="M0,M1")
+    ap.add_argument("--methods", default="classical_adjoint,classical_l1wav")
     ap.add_argument("--lam", type=float, default=None, help="override L1-wavelet lambda")
     ap.add_argument("--iterations", type=int, default=50)
     ap.add_argument("--output_dir", required=True)
@@ -102,7 +102,7 @@ def main():
         mv_op, y_views, _ = build_condition_operator(sample, masks_bundle, "merge_fixed", device, 1e-8)
 
         for mname in methods:
-            if mname == "MF":
+            if mname == "full_plain":
                 # Plain reconstruction of ONE complete k-space measurement (R=1,
                 # single repetition) -- the "single full scan" comparison target.
                 out_name = f"MF__{meta['subject_id']}_sl{meta['slice_id']:02d}_seed0.pt"
@@ -119,7 +119,7 @@ def main():
                 metrics = compute_all_metrics(recon.astype(np.complex64), sample, op_f, y_f,
                                               device, ref_np)
                 torch.save({
-                    "method": "MF", "condition": "single_full", "checkpoint": None,
+                    "method": "full_plain", "condition": "single_full", "checkpoint": None,
                     "reconstruction": recon.astype(np.complex64), "reference": ref_np,
                     "subject_id": meta["subject_id"], "slice_id": meta["slice_id"], "seed": 0,
                     "num_steps": 0, "l_ss": None, "likelihood_type": None, "lambda": None,
@@ -136,10 +136,10 @@ def main():
             if os.path.exists(out_path):
                 continue
             t0 = time.time()
-            if mname == "M0":
+            if mname == "classical_adjoint":
                 recon = adjoint_recon(merged_ksp, maps)
                 cond_label = "merge_fixed"; used_lam = None
-            elif mname == "M1":
+            elif mname == "classical_l1wav":
                 recon = l1wavelet_recon(merged_ksp, maps, merged_mask, lam, args.iterations)
                 cond_label = "merge_fixed"; used_lam = lam
             else:
@@ -151,7 +151,7 @@ def main():
                 "method": mname, "condition": cond_label, "checkpoint": None,
                 "reconstruction": recon.astype(np.complex64), "reference": ref_np,
                 "subject_id": meta["subject_id"], "slice_id": meta["slice_id"], "seed": 0,
-                "num_steps": args.iterations if mname == "M1" else 0,
+                "num_steps": args.iterations if mname == "classical_l1wav" else 0,
                 "l_ss": None, "likelihood_type": None, "lambda": used_lam,
                 "runtime_seconds": runtime, "num_net_evals": 0, "metrics": metrics,
                 "normalization_scale": meta.get("normalization_scale"),

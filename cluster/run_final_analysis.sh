@@ -33,7 +33,8 @@ python analysis/plot_mask_design.py --masks-root "$QUAD_MASKS" \
 # per-set montages / boxplots
 python analysis/plot_reconstructions.py --results-root "$FINAL" --output-dir figures/mvp
 python analysis/plot_reconstructions.py --results-root "$FINAL_QUAD" --output-dir figures/mvp \
-  --methods M2,M11,M10,M9,M18,M17,M16,M12,MF --suffix _quad --zf-condition joint_quad_comp
+  --methods single_r4,dup4_merge,dup4_ft,comp4_merge,comp4_ft,full_diffusion,full_plain \
+  --suffix _quad --zf-condition joint_quad_comp
 python analysis/plot_metrics.py --metrics tables/mvp/metrics_per_subject.csv --output-dir figures/mvp \
   --set main --budget-json "$MASKS/budget_report.json"
 python analysis/plot_metrics.py --metrics tables/mvp/metrics_per_subject_quad.csv \

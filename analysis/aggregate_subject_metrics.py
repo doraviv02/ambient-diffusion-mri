@@ -66,7 +66,9 @@ def main():
     print(summary[show].round(4).to_string(index=False))
 
     # paired comparisons (subject-level) between key method pairs, if present.
-    pairs = [("M3", "M4"), ("M4", "M5"), ("M5", "M6"), ("M2", "M4"), ("M1", "M4")]
+    pairs = [("dup2_merge", "single_r4"), ("comp2_ft", "dup2_ft"),
+             ("comp2_ft", "comp2_merge"), ("single_r4", "classical_l1wav"),
+             ("comp4_ft", "dup4_ft"), ("comp4_ft", "full_diffusion")]
     piv = subj_df.pivot_table(index="subject_id", columns="method", values="heldout_kspace_err")
     print("\nPaired held-out k-space error (subject-level, mean diff a-b, frac a<b):")
     for a, b in pairs:

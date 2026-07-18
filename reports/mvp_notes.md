@@ -8,6 +8,31 @@ All paired statistics quoted here are **subject-level** (bootstrap over subjects
 matching `analysis/build_mvp_report.py`. Earlier drafts of this file quoted
 slice-level win rates for a few comparisons; those have been recomputed.
 
+## Naming and the removed methods (read first)
+Experiments were renamed from opaque M-numbers to descriptive slugs, and the five
+redundant **"joint likelihood, original prior"** methods were **removed**: for
+aligned identical-mask views the joint likelihood is provably equal to the analytic
+noise-weighted merge (see §3), so they showed no dramatic difference from their
+`*_merge` twins. Each acquisition family keeps one `*_merge` representative plus the
+cross-view fine-tuned `*_ft` method (the contribution). Removed files are backed up
+under `runs/.../results/_deleted_joint_original/`.
+
+| slug | old id | | slug | old id |
+|---|---|---|---|---|
+| `classical_adjoint` | M0 | | `dup2_ft` | M6 |
+| `classical_l1wav` | M1 | | `comp2_merge` | M15 |
+| `single_r4` | M2 | | `comp2_ft` | M13 |
+| `fixed_split_merge` | M3 | | `dup4_merge` | M11 |
+| `fixed_split_ft` | M5 | | `dup4_ft` | M9 |
+| `dup2_merge` | M7 | | `comp4_merge` | M18 |
+| `full_diffusion` | M12 | | `comp4_ft` | M16 |
+| `full_plain` | MF | | **removed** | M4, M8, M10, M14, M17 |
+
+Fine-tuning effects, previously measured as (ft joint − original joint), are now
+measured against the **merge** baseline of the same family (equivalent, since merge
+== the removed original-prior joint). Historical sections below may still reference
+old M-ids when describing what happened at the time; use the table above to decode.
+
 ---
 
 # 1. Setup
@@ -74,12 +99,13 @@ Four defects materially altered results. Three were surfaced by user questions.
 ## 2.1 Brain-mask bug in metrics (fixed) — changed every number by ~+0.2 SSIM
 Runbook 17.1 requires brain-masked metrics; the first pass scored the **full FOV**
 including air, which is pure noise in the recon but averaged-down in the reference
-=> structurally uncorrelated => SSIM deflated by ~0.2 (e.g. M4 0.402 -> 0.598).
+=> structurally uncorrelated => SSIM deflated by ~0.2 (e.g. one method 0.402 -> 0.598).
 `brain_mask_from_magnitude` was itself broken (`0.08*p99` labelled **97% of the FOV**
 as brain at 0.3 T); switched to **Otsu** (brain fraction ~0.25). Metrics are now
 recomputed from the stored reconstructions with a mask derived from the
 *reference* (identical mask for every method on a slice); full-FOV variants are
-retained as `*_fullfov` for transparency. Masking also flipped M0 vs M1 — the
+retained as `*_fullfov` for transparency. Masking also flipped classical_adjoint vs
+classical_l1wav — the
 L1-wavelet baseline had been rewarded for smoothing the noisy background.
 *Surfaced by: user asking why SSIM was 0.4 when the montage looked good.*
 
@@ -87,21 +113,21 @@ L1-wavelet baseline had been rewarded for smoothing the noisy background.
 The first implementation scored **all** coefficients against view-0's *noisy* k-space,
 including the ones the method fitted. That rewards reproducing view-0's particular
 noise realization -> biased toward single-view methods and *penalized* multi-view
-methods that average noise away. Symptom: M7 (2x budget) scored *worse* than M2
+methods that average noise away. Symptom: dup2_merge (2x budget) scored *worse* than single_r4
 despite winning SSIM by 0.037. Fixed to score only coefficients outside the union of
 the condition's masks; the corrected metric now ranks **consistently with SSIM**.
 Old values retained as `heldout_kspace_err_allcoef`.
 Caveat: at 0.3 T the held-out (outer) k-space is largely noise, so the corrected
 values compress into 0.84-0.98 and discriminate weakly; SSIM/NRMSE vs the
 multi-repetition average carry more signal at low field.
-*Surfaced by: the M7-vs-M2 contradiction, which the user's provenance question prompted.*
+*Surfaced by: the dup2_merge-vs-single_r4 contradiction, which the user's provenance question prompted.*
 
 ## 2.3 EMA half-life pitfall (fixed) — would have faked a null result
 First fine-tune run used the default **EMA half-life = 0.5 Mimg (500 kimg)** while
 training only 0.02 Mimg (20 kimg). The saved/evaluated model is the EMA, which
 therefore stayed pinned at the pretrained weights: validation cross_view was
-**identical at kimg 5 and 10 (27.8105 vs 27.8109)**. This would have made M5==M4 as an
-artifact, not a real null result. Also lr=1e-5 left the raw training loss flat at
+**identical at kimg 5 and 10 (27.8105 vs 27.8109)**. This would have made the fine-tuned
+model == the original prior as an artifact, not a real null result. Also lr=1e-5 left the raw training loss flat at
 this (σ²·N-normalized) loss scale.
 **Fix**: `--ema 0.002` (2 kimg half-life, so the EMA tracks the fine-tuned weights)
 and `--lr 1e-4` -> 27.32→17.23, frac_improved=1.00. First run archived under
@@ -120,7 +146,7 @@ See §4. *Surfaced by: user asking why four scans would re-measure the same line
   256 px. The net runs fine at 256 (fully-conv), but the fine-tuned checkpoint MUST
   be *reconstructed* at 384 to match its state_dict keys. `checkpoint_arch` now
   honors a stored `img_resolution_override=384` -> loads 638/638 (100%).
-  Building at 256 gave 4/638 (would have broken M5/M6).
+  Building at 256 gave 4/638 (would have broken the fine-tuned methods).
 - `merge_fixed` operator needed a 4-D `[V=1,1,H,W]` mask (not `[1,H,W]`).
 - `natural_merge` sliced `ksp[:V]` for 4-view data.
 - Uncertainty manifest had to live in the masks root, or mask paths resolved
@@ -165,17 +191,24 @@ comparisons are unaffected; absolute SSIM is slightly generous. Re-scoring again
 4 held-out reps was offered and declined.
 
 ## Joint-vs-merged comparisons are confounded by a guidance-scale factor (verified)
+This is the finding that motivated **removing** the original-prior joint methods
+(old M4/M8/M10/M14/M17): they carry identical information to their `*_merge` twins,
+so any measured difference was a sampler artefact, not signal.
 The runbook's normalized fidelity averages over views, `D_joint = (1/V) sum_v
 ||M_v(FSx-y_v)||^2/(sigma^2 N)`, whereas the analytic merge uses `sigma_eff =
 sigma/sqrt(V)`, giving `D_merged = V * D_joint`. **Measured ratio: 1.989 (V=2),
 3.967 (V=4)** -- exactly V. Since the sampler applies `grad(D)/sqrt(D)`, the merged
-condition receives **sqrt(V)x stronger guidance at the same l_ss**. Consequences:
-- M3-vs-M4 and M7-vs-M8 ("joint == merge") were compared at a sqrt(2) guidance
-  difference and *happened* to agree; at V=4 the 2x factor makes them diverge
-  (M10 0.699 vs M11 0.656) despite carrying identical information.
+condition receives **sqrt(V)x stronger guidance at the same l_ss**. Consequences
+(measured while the joint methods still existed):
+- The fixed and 2x-dup "joint == merge" pairs were compared at a sqrt(2) guidance
+  difference and *happened* to agree; at V=4 the 2x factor made them diverge
+  (old joint 4x-dup 0.699 vs `dup4_merge` 0.656) despite carrying identical
+  information -- an artefact, not an advantage.
 - The equivalence unit tests remain correct: they compare the *raw* weighted-SSE
   gradients, which do match. It is the sampler-side normalization that differs.
-- A clean joint-vs-merge test needs per-condition l_ss tuning (or dropping the 1/V).
+- Because the confound made "joint vs merge" uninterpretable and the two are
+  information-equivalent, we keep only `*_merge` (analytic combiner) + `*_ft`
+  (fine-tuned) per family. A clean joint-vs-merge test would need dropping the 1/V.
 Note the 1/V averaging is deliberate in the runbook (to keep l_ss interpretable as V
 changes), but it *dilutes* the statistically-correct multi-view likelihood by V.
 
@@ -210,59 +243,54 @@ earlier results remain valid.
 ## 4.1 2xR=4: duplicated vs complementary (25 subjects, same 128-line budget)
 | method | SSIM | coverage |
 |---|---|---|
-| M2 single-view R=4 (64 lines) | 0.618 | 25% |
-| M7 merged 2xR=4 duplicated | 0.654 | 25% |
-| M8 joint 2xR=4 duplicated | 0.659 | 25% |
-| M6 xview-FT joint 2xR=4 duplicated | 0.663 | 25% |
-| **M15 merged 2xR=4 COMPLEMENTARY** | **0.706** | 44% |
-| **M14 joint 2xR=4 COMPLEMENTARY** | **0.704** | 44% |
-| **M13 xview-FT joint 2xR=4 COMPLEMENTARY** | **0.704** | 44% |
+| `single_r4` (64 lines) | 0.618 | 25% |
+| `dup2_merge` (merged 2xR=4 duplicated) | 0.654 | 25% |
+| `dup2_ft` (xview-FT 2xR=4 duplicated) | 0.663 | 25% |
+| **`comp2_merge` (merged 2xR=4 COMPLEMENTARY)** | **0.706** | 44% |
+| **`comp2_ft` (xview-FT 2xR=4 COMPLEMENTARY)** | **0.704** | 44% |
 
-Subject-paired: **M13-M6 +0.041 (100%)**, **M14-M8 +0.045 (100%)**,
-**M15-M7 +0.052 (100%)**, M13-M2 +0.087 (100%), **M13-M14 = -0.0001 (52%)**.
-This supersedes the main table's "best fixed-prior method" (M6 0.663 -> 0.706 at the
-same budget).
+Subject-paired: **comp2_ft-dup2_ft +0.041 (100%)**, **comp2_merge-dup2_merge +0.052
+(100%)**, comp2_ft-single_r4 +0.087 (100%), **comp2_ft-comp2_merge = -0.002 (32%)**.
+This supersedes the main table's "best fixed-prior method" (`dup2_ft` 0.663 -> 0.706
+at the same budget).
 
 ## 4.2 4xR=4 vs ONE FULL measurement (20 subjects) — "same budget, can we win?"
 Extra experiment (beyond the runbook), on the 4-view set (59 slices):
 
 | method | SSIM [95% CI] | lines | coverage |
 |---|---|---|---|
-| MF plain recon, 1 FULL k-space | **0.796 [0.783,0.812]** | 256 | 100% |
-| **M18 merged 4xR=4 COMPLEMENTARY** | 0.766 [0.751,0.782] | 256 | 81% |
-| **M17 joint 4xR=4 COMPLEMENTARY** | 0.765 [0.751,0.781] | 256 | 81% |
-| **M16 xview-FT joint 4xR=4 COMPLEMENTARY** | 0.764 [0.749,0.781] | 256 | 81% |
-| M12 diffusion, 1 FULL k-space | 0.758 [0.744,0.773] | 256 | 100% |
-| M9 joint 4xR=4 + xview-FT (duplicated) | 0.703 [0.685,0.724] | 256 | 25% |
-| M10 joint 4xR=4, original prior (duplicated) | 0.699 [0.679,0.721] | 256 | 25% |
-| M11 merged 4xR=4 (duplicated) | 0.656 [0.636,0.677] | 256 | 25% |
-| M2 single-view R=4 | 0.643 [0.622,0.667] | 64 | 25% |
+| `full_plain` (plain recon, 1 FULL k-space) | **0.796 [0.783,0.812]** | 256 | 100% |
+| **`comp4_merge` (merged 4xR=4 COMPLEMENTARY)** | 0.766 [0.751,0.782] | 256 | 81% |
+| **`comp4_ft` (xview-FT 4xR=4 COMPLEMENTARY)** | 0.764 [0.749,0.781] | 256 | 81% |
+| `full_diffusion` (diffusion, 1 FULL k-space) | 0.758 [0.744,0.773] | 256 | 100% |
+| `dup4_ft` (4xR=4 + xview-FT duplicated) | 0.703 [0.685,0.724] | 256 | 25% |
+| `dup4_merge` (merged 4xR=4 duplicated) | 0.656 [0.636,0.677] | 256 | 25% |
+| `single_r4` | 0.643 [0.622,0.667] | 64 | 25% |
 
 **Answer: yes against the same reconstruction method, no against the best one.**
-Subject-paired: **M16-M12 = +0.007 SSIM (M16 wins 65%) and -0.014 NRMSE (95%)** ->
-against the *same* reconstruction method, four cheap complementary scans **beat** one
-full scan on both metrics.
-But **M12-MF = -0.039 SSIM (MF wins 90%)**: the diffusion prior **hurts** on
-fully-sampled data — when the data determines the image, a generative prior +
-guidance only adds error.
+Subject-paired: **comp4_ft-full_diffusion = +0.007 SSIM (comp4_ft wins 65%) and -0.014
+NRMSE (95%)** -> against the *same* reconstruction method, four cheap complementary
+scans **beat** one full scan on both metrics.
+But **full_diffusion-full_plain = -0.039 SSIM (plain wins 90%)**: the diffusion prior
+**hurts** on fully-sampled data — when the data determines the image, a generative
+prior + guidance only adds error.
 
-The M16-vs-MF metric split is the informative one:
-- SSIM: **-0.032** [-0.045, -0.017], M16 wins only 10%.
+The comp4_ft-vs-full_plain metric split is the informative one:
+- SSIM: **-0.032** [-0.045, -0.017], comp4_ft wins only 10%.
 - NRMSE: **+0.0006** [-0.0041, +0.0045] — a **statistical tie** (0.1205 vs 0.1198).
 
-So M16 is as accurate as a full scan in the L2 sense and loses only on *structural*
-similarity. That is the signature of a prior painting plausible-but-wrong texture,
-not of missing information — i.e. **M16-MF is a reconstruction deficit, not an
-acquisition one**. We suspected `l_ss=30` (tuned once on single_r4) was too weak for
-well-sampled data and that per-tier tuning would close the gap. **We tested this and
-it is false — see §7.**
-(An earlier draft of this file mis-attributed the NRMSE tie to M12; M12's NRMSE is
-0.135, clearly *worse* than M16's 0.120. The tie is with MF.)
+So comp4_ft is as accurate as a full scan in the L2 sense and loses only on
+*structural* similarity. That is the signature of a prior painting plausible-but-wrong
+texture, not of missing information — i.e. **comp4_ft-full_plain is a reconstruction
+deficit, not an acquisition one**. We suspected `l_ss=30` (tuned once on single_r4)
+was too weak for well-sampled data and that per-tier tuning would close the gap.
+**We tested this and it is false — see §7.**
 
-The acquisition fix is what moved this: **M16-M9 = +0.061 on 100% of subjects** —
-the largest single effect measured anywhere in the study. With the duplicated design
-the answer was *no* by 0.093; complementary masks close two thirds of that.
-Also: at 81% coverage **all method variants converge** (M16~M17~M18 within 0.002).
+The acquisition fix is what moved this: **comp4_ft-dup4_ft = +0.061 on 100% of
+subjects** — the largest single effect measured anywhere in the study. With the
+duplicated design the answer was *no* by 0.093; complementary masks close two thirds
+of that. Also: at 81% coverage the merge and fine-tuned variants **converge**
+(comp4_merge ~ comp4_ft within 0.002).
 
 ---
 
@@ -273,32 +301,34 @@ Also: at 81% coverage **all method variants converge** (M16~M17~M18 within 0.002
 | **acquisition design** (complementary vs duplicated masks, same budget) | **+0.041 .. +0.061** |
 | extra cheap repetition at same coverage (pure sqrt(2) SNR) | +0.037 |
 | learned prior vs classical baselines (sparse regime only) | +0.10 |
-| prior / cross-view fine-tuning / joint-vs-merged | **-0.001 .. +0.010** |
+| cross-view fine-tuning (vs merge baseline) | **-0.002 .. +0.009** |
 
 Acquisition design is worth ~5-10x more than every reconstruction-method choice in
 this study combined. The cross-view fine-tuning (the project's nominal contribution)
 only pays off in the **sparse** regime, and decays monotonically to zero as coverage
-grows:
+grows (measured against the `*_merge` baseline of each family, since the original-prior
+joint methods were removed):
 
 | coverage | comparison | SSIM delta | wins |
 |---|---|---|---|
-| 19% | M5-M4 | +0.010 | 88% |
-| 25% | M6-M8 | +0.003 | 60% |
-| 44% | M13-M14 | -0.000 | 52% |
-| 81% | M16-M17 | -0.001 | 40% |
+| 19% | fixed_split_ft - fixed_split_merge | +0.008 | 80% |
+| 25% | dup2_ft - dup2_merge | +0.009 | 84% |
+| 44% | comp2_ft - comp2_merge | -0.002 | 32% |
+| 81% | comp4_ft - comp4_merge | -0.001 | 40% |
 
-Once coverage is adequate the data dominates and prior/combiner choices wash out.
+Once coverage is adequate the data dominates and prior choices wash out.
 Credit: this was surfaced by the user questioning why four scans would re-measure
 the same lines.
 
 ## Negative findings retained (runbook §9.4)
 - Joint likelihood == analytic merging for aligned identical-mask views (theory
   predicted it; we confirm it, and do not claim the summation as a contribution).
+  This redundancy is *why* the original-prior joint methods were removed (§Naming).
 - Cross-view fine-tuning is worth ~0 above 40% coverage.
-- The diffusion prior *hurts* on well-sampled data (M12 < MF).
-- At a **fixed** budget, multi-view *loses* to single-view (M2-M5 = +0.013, 68%):
-  the duplicated ACS buys 48 unique columns instead of 64. Multi-view only helps
-  when it buys extra scans, not when it subdivides one.
+- The diffusion prior *hurts* on well-sampled data (`full_diffusion` < `full_plain`).
+- At a **fixed** budget, multi-view *loses* to single-view (single_r4 - fixed_split_ft
+  = +0.013, 68%): the duplicated ACS buys 48 unique columns instead of 64. Multi-view
+  only helps when it buys extra scans, not when it subdivides one.
 - Cross-view fine-tuning is a short (0.02 Mimg) empirical self-supervised adaptation;
   it does not inherit the Ambient Diffusion identifiability theorem.
 
@@ -306,7 +336,7 @@ the same lines.
 Conditions B/C follow runbook 10 ("counting duplicated ACS coefficients twice"),
 i.e. each of the two R=8 views re-acquires the 16-line ACS, mirroring *realistic
 repeated scanning*. Cost: at the same 64-line budget the two views cover only **48
-unique columns** vs single-view R=4's **64** — which is why M2 beats M3/M4/M5.
+unique columns** vs single-view R=4's **64** — which is why single_r4 beats the fixed-budget methods.
 An **asymmetric** design (view A = ACS + outer, view B = outer only) would give 64
 unique columns at the same cost, trading √2 SNR in the k-space centre for 2x more
 unique outer coverage. Largely superseded by the complementary designs (§4), which
@@ -316,8 +346,8 @@ apply the same principle at the extra-repetition budgets.
 
 # 7. Per-tier l_ss retune (RESULT: negative — l_ss=30 optimal at every tier)
 We suspected the single global `l_ss=30` (tuned on sparse single_r4) was
-mis-calibrated for the well-sampled conditions and was the cause of the M12<MF /
-M16<MF SSIM gap. Tested it: tuned `l_ss` **per coverage tier** on validation
+mis-calibrated for the well-sampled conditions and was the cause of the full_diffusion<full_plain /
+full_diffusion<full_plain and comp4_ft<full_plain SSIM gap. Tested it: tuned `l_ss` **per coverage tier** on validation
 (6 subjects, test never touched), held-out k-space error primary, exactly the
 original criterion. Representatives: sparse = single_r4 (25%), mid =
 joint_extra_comp (44%), dense = a synthetic 80%-holdout single-view mask
@@ -337,7 +367,7 @@ dense tier *falls* above 30 (SSIM 0.642→0.513 by l_ss=300): in this DPS sample
 larger `l_ss` is not "trust the data more" — it takes larger guidance steps that
 overshoot and inject noise, so raising it on well-sampled data **hurts**.
 **Consequences:**
-- The M12<MF and M16<MF gaps are **not** a guidance-tuning artefact. At the best
+- The full_diffusion<full_plain and comp4_ft<full_plain gaps are **not** a guidance-tuning artefact. At the best
   available `l_ss`, diffusion sampling still tops out below a direct least-squares
   solve on well-sampled data. The gap is intrinsic to generative-prior + guidance
   vs a direct solve when the data already determines the image — not something a

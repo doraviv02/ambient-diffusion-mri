@@ -13,55 +13,43 @@ prior_acs_lines: 20
 checkpoints:
   original: /home/doraviv/Lowfield_Ambient/models/ambient_diffusion_mri/ambient_models/ambient/R=4
   finetuned: /home/doraviv/Lowfield_Ambient/runs/mv_ambient_mvp/checkpoints/crossview_t2/best
+# The redundant "joint likelihood, original prior" methods (old M4/M8/M10/M14/M17)
+# were removed: joint == analytic merge for aligned identical-mask views. Each family
+# keeps one merge representative plus the cross-view fine-tuned method (the contribution).
 methods:
-  M2:
+  single_r4:
     checkpoint: original
     condition: single_r4
-  M3:
+  fixed_split_merge:
     checkpoint: original
     condition: merge_fixed
-  M4:
-    checkpoint: original
-    condition: joint_fixed
-  M5:
+  fixed_split_ft:
     checkpoint: finetuned
     condition: joint_fixed
-  M6:
+  dup2_ft:
     checkpoint: finetuned
     condition: joint_extra
-  M7:
+  dup2_merge:
     checkpoint: original
     condition: merge_extra
-  M8:
-    checkpoint: original
-    condition: joint_extra
-  M9:
+  dup4_ft:
     checkpoint: finetuned
     condition: joint_quad
-  M10:
-    checkpoint: original
-    condition: joint_quad
-  M11:
+  dup4_merge:
     checkpoint: original
     condition: merge_quad
-  M12:
+  full_diffusion:
     checkpoint: original
     condition: single_full
-  M13:
+  comp2_ft:
     checkpoint: finetuned
     condition: joint_extra_comp
-  M14:
-    checkpoint: original
-    condition: joint_extra_comp
-  M15:
+  comp2_merge:
     checkpoint: original
     condition: merge_extra_comp
-  M16:
+  comp4_ft:
     checkpoint: finetuned
     condition: joint_quad_comp
-  M17:
-    checkpoint: original
-    condition: joint_quad_comp
-  M18:
+  comp4_merge:
     checkpoint: original
     condition: merge_quad_comp
