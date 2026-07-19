@@ -7,11 +7,6 @@ brain data, and — more importantly — asks how much the **acquisition design*
 (which k-space lines the repeated scans measure) matters versus the reconstruction
 method.
 
-**The headline finding:** acquisition design dominates reconstruction method by
-5–10×, and the honest low-field ceiling is classical multi-average (NEX), not the
-learned prior. See [`reports/mvp_summary.md`](reports/mvp_summary.md) for the full
-write-up and [`reports/mvp_notes.md`](reports/mvp_notes.md) for the decision log
-(including four bugs that changed conclusions).
 
 > This README is the MVP submission guide. The original upstream README is kept as
 > [`README_upstream.md`](README_upstream.md).
@@ -22,7 +17,7 @@ write-up and [`reports/mvp_notes.md`](reports/mvp_notes.md) for the decision log
 
 | Deliverable | File |
 |---|---|
-| **Results tables** (SSIM / NRMSE / held-out k-error, per method, both sets) | [`reports/mvp_summary.md`](reports/mvp_summary.md) |
+| **Results tables** (SSIM / NRMSE / held-out k-error, per method, both sets) + dataset & scope | [`reports/mvp_summary.md`](reports/mvp_summary.md) |
 | Results tables, standalone (Markdown + CSV) | `tables/mvp/results_tables.md`, `tables/mvp/results_*.csv` |
 | **Reconstruction montages** — the reconstructed images per results table | `figures/mvp/recon_montage_2view.png`, `figures/mvp/recon_montage_4view.png` |
 | Results tables visualised (bars ± 95% CI) | `figures/mvp/results_2view.png`, `figures/mvp/results_4view.png` |
@@ -229,7 +224,7 @@ tools/            preprocessing, mask generation, tuning, manifests, name migrat
 configs/mvp/      data / mask / inference / training / classical configs
 cluster/          run_finetune.sh, run_final_diffusion.sh, run_final_analysis.sh
 utils/            multiview_mri.py, mri_fft.py, checkpoint_arch.py, train_masks.py
-reports/          mvp_summary.md (results), mvp_notes.md (decision log)
+reports/          mvp_summary.md (dataset/scope + results tables), mvp_notes.md (config record)
 tables/mvp/       metric CSVs + results tables (md/csv)
 figures/mvp/      the canonical figures (montages, results bars, conclusions)
 solve_inverse_mv_adps.py    multi-view inference entry point
