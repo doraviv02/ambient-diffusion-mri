@@ -63,13 +63,17 @@ def pick_cases(res, methods, n=3):
     return [(k, good[k]) for k in chosen]
 
 
-def draw_block(fig, cell, res, methods, cases, zf_cond, title):
+def block_title(fig, cell, text):
+    """Render a block heading in its OWN gridspec row, so it can never collide
+    with the per-column titles of the montage below it."""
+    ax = fig.add_subplot(cell)
+    ax.axis("off")
+    ax.text(0.0, 0.15, text, transform=ax.transAxes, fontsize=11.5,
+            fontweight="bold", ha="left", va="bottom")
+
+
+def draw_block(fig, cell, res, methods, cases, zf_cond):
     ncol = 2 + len(methods)                  # reference + zero-filled + methods
-    # heading axis first (transparent, behind the images), carries the block title
-    # placed well above the two-line column titles of the first row.
-    ax0 = fig.add_subplot(cell); ax0.axis("off"); ax0.patch.set_alpha(0.0)
-    ax0.text(0.0, 1.055, title, transform=ax0.transAxes, fontsize=11.5,
-             fontweight="bold", ha="left", va="bottom")
     inner = gridspec.GridSpecFromSubplotSpec(len(cases), ncol, subplot_spec=cell,
                                              wspace=0.04, hspace=0.06)
     for r, ((subj, sl), mdict) in enumerate(cases):
@@ -113,12 +117,13 @@ def main():
     # ---- 2-view: two tables stacked into one grouped figure ----
     cases2 = pick_cases(res2, list(set(T_FIXED + T_2X)), n=args.cases)
     ncol2 = max(2 + len(T_FIXED), 2 + len(T_2X))
-    fig = plt.figure(figsize=(1.55 * ncol2 + 1, 1.7 * args.cases * 2 + 1.4))
-    outer = gridspec.GridSpec(2, 1, height_ratios=[1, 1], hspace=0.34)
-    draw_block(fig, outer[0], res2, T_FIXED, cases2, "single_r4",
-               "Table 1 — classical baselines & fixed budget (64 lines)")
-    draw_block(fig, outer[1], res2, T_2X, cases2, "single_r4",
-               "Table 2 — 2x budget (128 lines): duplicated / complementary / fully-comp")
+    fig = plt.figure(figsize=(1.55 * ncol2 + 1, 1.7 * args.cases * 2 + 2.2))
+    # dedicated thin rows for the block headings -> no overlap with column titles
+    outer = gridspec.GridSpec(4, 1, height_ratios=[0.13, 1, 0.13, 1], hspace=0.30)
+    block_title(fig, outer[0], "Table 1 — classical baselines & fixed budget (64 lines)")
+    draw_block(fig, outer[1], res2, T_FIXED, cases2, "single_r4")
+    block_title(fig, outer[2], "Table 2 — 2x budget (128 lines): duplicated / complementary / fully-comp")
+    draw_block(fig, outer[3], res2, T_2X, cases2, "single_r4")
     fig.suptitle("2-view set — reconstructions per results table  (columns coloured by design; "
                  "same intensity window per row)", fontsize=12, fontweight="bold")
     fig.subplots_adjust(top=0.92, bottom=0.01, left=0.05, right=0.99)
@@ -128,10 +133,10 @@ def main():
 
     # ---- 4-view: single table ----
     casesq = pick_cases(resq, T_QUAD, n=args.cases)
-    figq = plt.figure(figsize=(1.5 * (2 + len(T_QUAD)) + 1, 1.9 * args.cases + 1.2))
-    gsq = gridspec.GridSpec(1, 1)
-    draw_block(figq, gsq[0], resq, T_QUAD, casesq, "joint_quad_comp",
-               "4-view table — single_r4 -> full scan -> NEX=2")
+    figq = plt.figure(figsize=(1.5 * (2 + len(T_QUAD)) + 1, 1.9 * args.cases + 1.8))
+    gsq = gridspec.GridSpec(2, 1, height_ratios=[0.11, 1], hspace=0.30)
+    block_title(figq, gsq[0], "4-view table — single_r4 -> full scan -> NEX=2")
+    draw_block(figq, gsq[1], resq, T_QUAD, casesq, "joint_quad_comp")
     figq.suptitle("4-view set — reconstructions per results table  (columns coloured by design; "
                   "same intensity window per row)", fontsize=12, fontweight="bold")
     figq.subplots_adjust(top=0.88, bottom=0.02, left=0.05, right=0.99)

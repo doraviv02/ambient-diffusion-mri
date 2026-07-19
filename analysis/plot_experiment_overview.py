@@ -6,7 +6,6 @@ per-method montages.  Everything is computed from the per-subject metric tables
 so the plots and the report cannot disagree.
 
 Outputs (figures/mvp/):
-  experiment_overview.png     SSIM vs unique k-space coverage, all 20 methods
   effect_sizes_forest.png     paired effects, acquisition design vs recon method
   budget_ladder.png           SSIM vs lines bought, duplicated vs complementary
   finetuning_vs_coverage.png  cross-view fine-tuning benefit decaying with coverage
@@ -21,12 +20,10 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.patheffects as pe
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from analysis.experiments import EXPERIMENTS, DESIGN_COLORS, design_of, methods_for
 
-MARKERS = {"single": "o", "merge": "s", "ft": "^", "plain": "D"}
 DESIGN_LABEL = {
     "fixed": "fixed budget (split one scan)",
     "1x": "one cheap scan",
@@ -55,78 +52,6 @@ def subj_mean(df, m, col="ssim"):
     v = df[df.method == m][col]
     return float(v.mean()) if len(v) else None
 
-
-# ---------------------------------------------------------------------------
-# 1. SSIM vs coverage -- the headline figure
-# ---------------------------------------------------------------------------
-def fig_overview(main, quad, out):
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6.2), sharey=False)
-    for ax, (df, set_, title, n, jit) in zip(axes, [
-            (main, "main", "2-view set", main.subject_id.nunique(), 0.85),
-            (quad, "quad", "4-view set", quad.subject_id.nunique(), 2.2)]):
-        # Methods sharing a coverage differ by <0.006 SSIM, so points (and their
-        # labels) would overlap. Spread each coverage cluster horizontally.
-        present = [m for m in methods_for(set_) if not df[df.method == m].empty]
-        clusters = {}
-        for m in present:
-            clusters.setdefault(EXPERIMENTS[m].cov, []).append(m)
-        for cov, ms in clusters.items():
-            ms.sort(key=lambda m: subj_mean(df, m))
-            for i, m in enumerate(ms):
-                e = EXPERIMENTS[m]
-                x = cov * 100 + (i - (len(ms) - 1) / 2) * jit
-                y = subj_mean(df, m)
-                c = DESIGN_COLORS[design_of(m)]
-                ax.scatter(x, y, s=190, color=c, marker=MARKERS[e.combiner],
-                           edgecolor="black" if e.prior == "finetuned" else "white",
-                           linewidth=2.0 if e.prior == "finetuned" else 1.0, zorder=3)
-                # stagger labels above/below: cluster members differ by <0.006 SSIM
-                # so a single offset would overlap regardless of jitter. Colour the
-                # text to match its marker so close pairs stay unambiguous.
-                dy = 13 if i % 2 == 0 else -23
-                ax.annotate(m, (x, y), textcoords="offset points", xytext=(0, dy),
-                            ha="center", fontsize=8.5, fontweight="bold", color=c,
-                            zorder=4, path_effects=[pe.withStroke(linewidth=2.2,
-                                                                  foreground="white")])
-        ax.set_xlabel("unique k-space coverage (% of PE columns)")
-        ax.set_ylabel("brain-masked SSIM (subject mean)")
-        ax.set_title(f"{title}  ({n} subjects)")
-        ax.grid(alpha=0.3)
-
-    # annotate the two big design jumps
-    a = axes[0]
-    y6, y13 = subj_mean(main, "dup2_ft"), subj_mean(main, "comp2_ft")
-    if y6 and y13:
-        a.annotate("", xy=(43.8, y13), xytext=(25, y6),
-                   arrowprops=dict(arrowstyle="->", lw=2.4, color="#2a7f3f"))
-        a.text(34, (y6 + y13) / 2 + 0.008, f"same 128 lines\n+{y13-y6:.3f} SSIM",
-               color="#2a7f3f", fontsize=10, fontweight="bold", ha="center")
-    b = axes[1]
-    y9, y16, yMF = subj_mean(quad, "dup4_ft"), subj_mean(quad, "comp4_ft"), subj_mean(quad, "full_plain")
-    if y9 and y16:
-        b.annotate("", xy=(81.2, y16), xytext=(25, y9),
-                   arrowprops=dict(arrowstyle="->", lw=2.4, color="#2a7f3f"))
-        b.text(53, (y9 + y16) / 2 + 0.008, f"same 256 lines\n+{y16-y9:.3f} SSIM",
-               color="#2a7f3f", fontsize=10, fontweight="bold", ha="center")
-    if yMF:
-        b.axhline(yMF, ls="--", color="#c44e52", lw=1.5, alpha=0.8)
-        b.text(24, yMF - 0.007, "ceiling: one full scan, plain recon (full_plain)",
-               color="#c44e52", fontsize=9, va="top")
-
-    handles = [plt.Line2D([], [], marker="o", ls="", color=DESIGN_COLORS[k], ms=11,
-                          label=DESIGN_LABEL[k]) for k in ["1x", "fixed", "dup", "comp", "fcomp", "full", "dualfull"]]
-    handles += [plt.Line2D([], [], marker=MARKERS[k], ls="", color="gray", ms=11,
-                           label=f"{k}") for k in ["single", "merge", "ft", "plain"]]
-    handles += [plt.Line2D([], [], marker="o", ls="", mfc="white", mec="black", mew=2, ms=11,
-                           label="cross-view fine-tuned")]
-    fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False, fontsize=9)
-    fig.suptitle("Coverage, not method, drives reconstruction quality\n"
-                 "colour = acquisition design | marker = combiner | black ring = fine-tuned prior",
-                 fontsize=13, fontweight="bold")
-    fig.tight_layout(rect=[0, 0.10, 1, 0.93])
-    fig.savefig(out, dpi=130, bbox_inches="tight")
-    plt.close(fig)
-    print(f"Wrote {out}")
 
 
 # ---------------------------------------------------------------------------
@@ -168,9 +93,8 @@ def fig_forest(main, quad, out):
             color="#2a7f3f", fontweight="bold", fontsize=10.5)
     ax.text(0.985, 0.40, "RECONSTRUCTION METHOD", transform=ax.transAxes, ha="right",
             color="#8172b2", fontweight="bold", fontsize=10.5)
-    ax.set_title("What actually moves the needle\n"
-                 "design effects are 5-10x larger than every method effect",
-                 fontsize=12.5, fontweight="bold")
+    ax.set_title("Acquisition vs Reconstruction contributions to SSIM",
+                 fontsize=13, fontweight="bold")
     ax.grid(axis="x", alpha=0.3)
     fig.tight_layout()
     fig.savefig(out, dpi=130, bbox_inches="tight")
@@ -263,9 +187,8 @@ def fig_ft(main, quad, out):
     ax.set_xlim(10, 95)
     ax.set_xlabel("unique k-space coverage (%)")
     ax.set_ylabel("SSIM gain from cross-view fine-tuning\n(paired, 95% CI)")
-    ax.set_title("The project's contribution is a SPARSE-REGIME effect\n"
-                 "cross-view fine-tuning decays to zero once coverage is adequate",
-                 fontsize=12, fontweight="bold")
+    ax.set_title("cross-view fine tuning decays to zero at adequate k-space coverage",
+                 fontsize=12.5, fontweight="bold")
     ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(out, dpi=130, bbox_inches="tight")
@@ -283,7 +206,6 @@ def main():
     m = pd.read_csv(args.per_subject)
     q = pd.read_csv(args.per_subject_quad)
     o = args.output_dir
-    fig_overview(m, q, os.path.join(o, "experiment_overview.png"))
     fig_forest(m, q, os.path.join(o, "effect_sizes_forest.png"))
     fig_budget(m, q, os.path.join(o, "budget_ladder.png"))
     fig_ft(m, q, os.path.join(o, "finetuning_vs_coverage.png"))

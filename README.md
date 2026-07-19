@@ -26,7 +26,7 @@ write-up and [`reports/mvp_notes.md`](reports/mvp_notes.md) for the decision log
 | Results tables, standalone (Markdown + CSV) | `tables/mvp/results_tables.md`, `tables/mvp/results_*.csv` |
 | **Reconstruction montages** — the reconstructed images per results table | `figures/mvp/recon_montage_2view.png`, `figures/mvp/recon_montage_4view.png` |
 | Results tables visualised (bars ± 95% CI) | `figures/mvp/results_2view.png`, `figures/mvp/results_4view.png` |
-| Cross-experiment conclusions | `figures/mvp/experiment_overview.png`, `effect_sizes_forest.png`, `budget_ladder.png`, `finetuning_vs_coverage.png` |
+| Cross-experiment conclusions | `figures/mvp/effect_sizes_forest.png`, `budget_ladder.png`, `finetuning_vs_coverage.png` |
 | Mask designs / l_ss tuning | `figures/mvp/mask_design_all.png`, `lss_tier_tuning.png` |
 
 If you only want to regenerate the tables and figures from the reconstructions that

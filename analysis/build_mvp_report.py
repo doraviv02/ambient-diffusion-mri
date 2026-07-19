@@ -362,8 +362,6 @@ def main():
                                   "(the budget question, incl. dualfull NEX=2)"),
         ]),
         ("Cross-experiment (the conclusions)", [
-            ("experiment_overview.png", "SSIM vs unique k-space coverage, all methods, both sets "
-                                        "-- the headline: coverage separates, method does not"),
             ("effect_sizes_forest.png", "every paired comparison with 95% CI, split into acquisition "
                                         "design vs reconstruction method"),
             ("budget_ladder.png", "every experiment as a bar, grouped by what it cost (64/128/256 lines)"),

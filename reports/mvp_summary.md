@@ -160,7 +160,6 @@ Two *complete* k-space acquisitions of the same slice (512 lines), the realistic
 
 **Cross-experiment (the conclusions)**
 
-- `figures/mvp/experiment_overview.png` -- SSIM vs unique k-space coverage, all methods, both sets -- the headline: coverage separates, method does not
 - `figures/mvp/effect_sizes_forest.png` -- every paired comparison with 95% CI, split into acquisition design vs reconstruction method
 - `figures/mvp/budget_ladder.png` -- every experiment as a bar, grouped by what it cost (64/128/256 lines)
 - `figures/mvp/finetuning_vs_coverage.png` -- the cross-view fine-tuning benefit decaying to zero as coverage grows
