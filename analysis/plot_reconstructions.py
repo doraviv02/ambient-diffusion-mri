@@ -77,6 +77,8 @@ def main():
     ap.add_argument("--suffix", default="", help="appended to output filenames")
     ap.add_argument("--zf-condition", default="single_r4",
                     help="condition whose view-0 zero-filled image is shown")
+    ap.add_argument("--emit", choices=["both", "montage", "errors"], default="both",
+                    help="which figure(s) to write")
     args = ap.parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
     res = load_results(args.results_root)
@@ -88,31 +90,34 @@ def main():
     ncol = 2 + len(methods)  # reference + zero-filled + methods
 
     # ---- montage ----
-    fig, axes = plt.subplots(len(cases), ncol, figsize=(2.1 * ncol, 2.3 * len(cases)),
-                             squeeze=False)
-    for r, ((subj, sl), mdict) in enumerate(cases):
-        any_d = next(iter(mdict.values()))
-        ref = get_reference(any_d)
-        vmax = np.percentile(ref, 99) if ref is not None else None
-        zf = zero_filled_mag(any_d["mask_path"], args.zf_condition) if any_d.get("mask_path") else None
-        panels = [("Reference", ref), ("Zero-filled", zf)]
-        for m in methods:
-            panels.append((METHOD_LABELS.get(m, m), recon_mag(mdict[m]) if m in mdict else None))
-        for c, (title, img) in enumerate(panels):
-            ax = axes[r, c]
-            if img is not None:
-                ax.imshow(img, cmap="gray", vmin=0, vmax=vmax)
-            ax.set_xticks([]); ax.set_yticks([])
-            if r == 0:
-                ax.set_title(title, fontsize=9)
-            if c == 0:
-                ax.set_ylabel(f"{subj}\nsl{sl}", fontsize=8)
-    fig.suptitle("Reconstruction montage (identical intensity window per row)", fontsize=11)
-    fig.tight_layout()
-    fig.savefig(os.path.join(args.output_dir, f"reconstruction_montage{args.suffix}.png"), dpi=120, bbox_inches="tight")
-    plt.close(fig)
+    if args.emit != "errors":
+        fig, axes = plt.subplots(len(cases), ncol, figsize=(2.1 * ncol, 2.3 * len(cases)),
+                                 squeeze=False)
+        for r, ((subj, sl), mdict) in enumerate(cases):
+            any_d = next(iter(mdict.values()))
+            ref = get_reference(any_d)
+            vmax = np.percentile(ref, 99) if ref is not None else None
+            zf = zero_filled_mag(any_d["mask_path"], args.zf_condition) if any_d.get("mask_path") else None
+            panels = [("Reference", ref), ("Zero-filled", zf)]
+            for m in methods:
+                panels.append((METHOD_LABELS.get(m, m), recon_mag(mdict[m]) if m in mdict else None))
+            for c, (title, img) in enumerate(panels):
+                ax = axes[r, c]
+                if img is not None:
+                    ax.imshow(img, cmap="gray", vmin=0, vmax=vmax)
+                ax.set_xticks([]); ax.set_yticks([])
+                if r == 0:
+                    ax.set_title(title, fontsize=9)
+                if c == 0:
+                    ax.set_ylabel(f"{subj}\nsl{sl}", fontsize=8)
+        fig.suptitle("Reconstruction montage (identical intensity window per row)", fontsize=11)
+        fig.tight_layout()
+        fig.savefig(os.path.join(args.output_dir, f"reconstruction_montage{args.suffix}.png"), dpi=120, bbox_inches="tight")
+        plt.close(fig)
 
     # ---- error maps ----
+    if args.emit == "montage":
+        print(f"Wrote reconstruction_montage{args.suffix}.png (montage only)"); return
     fig, axes = plt.subplots(len(cases), len(methods), figsize=(2.3 * len(methods), 2.5 * len(cases)),
                              squeeze=False)
     for r, ((subj, sl), mdict) in enumerate(cases):
@@ -140,7 +145,7 @@ def main():
     fig.tight_layout()
     fig.savefig(os.path.join(args.output_dir, f"error_maps{args.suffix}.png"), dpi=120, bbox_inches="tight")
     plt.close(fig)
-    print(f"Wrote reconstruction_montage.png and error_maps.png ({len(cases)} cases, {len(methods)} methods)")
+    print(f"Wrote error_maps{args.suffix}.png ({len(cases)} cases, {len(methods)} methods)")
 
 
 if __name__ == "__main__":

@@ -148,12 +148,15 @@ Two *complete* k-space acquisitions of the same slice (512 lines), the realistic
 
 ## Figures
 
+**Main results — reconstruction montages (per results table)**
+
+- `figures/mvp/recon_montage_2view.png` -- reconstructed IMAGES per 2-view table (columns = the table's methods, coloured by design; 3 example slices)
+- `figures/mvp/recon_montage_4view.png` -- reconstructed IMAGES for the 4-view table (single_r4 -> full scan -> NEX=2); dualfull_merge is visibly the cleanest
+
 **Results tables (visualized)**
 
 - `figures/mvp/results_2view.png` -- the two 2-view result tables (fixed budget; 2x budget) as SSIM and NRMSE bars with 95% CI, coloured by design
 - `figures/mvp/results_4view.png` -- the 4-view result table as SSIM and NRMSE bars with 95% CI (the budget question, incl. dualfull NEX=2)
-- `figures/mvp/recon_montage_2view.png` -- reconstructed IMAGES per 2-view table (columns = the table's methods, coloured by design; 3 example slices)
-- `figures/mvp/recon_montage_4view.png` -- reconstructed IMAGES for the 4-view table (single_r4 -> full scan -> NEX=2); dualfull_merge is visibly the cleanest
 
 **Cross-experiment (the conclusions)**
 
@@ -162,33 +165,15 @@ Two *complete* k-space acquisitions of the same slice (512 lines), the realistic
 - `figures/mvp/budget_ladder.png` -- every experiment as a bar, grouped by what it cost (64/128/256 lines)
 - `figures/mvp/finetuning_vs_coverage.png` -- the cross-view fine-tuning benefit decaying to zero as coverage grows
 
-**Acquisition design**
+**Acquisition design and tuning**
 
-- `figures/mvp/mask_design_all.png` -- all 8 conditions: per-view masks, union coverage, and lines-bought vs unique-lines efficiency
-- `figures/mvp/mask_design.png` -- original 4-condition mask figure (runbook 10)
-- `figures/mvp/mask_design_quad.png` -- mask figure for the 4-view mask set
-
-**2-view set (25 subjects)**
-
-- `figures/mvp/reconstruction_montage.png` -- reference / zero-filled / 11 methods on 4 cases picked by input SNR
-- `figures/mvp/error_maps.png` -- per-method absolute error vs the reference
-- `figures/mvp/metric_boxplots.png` -- subject-level NRMSE / SSIM / held-out error, boxes coloured by design
-- `figures/mvp/fixed_vs_extra_budget.png` -- metric vs acquired coefficients
-- `figures/mvp/data_consistency_curves.png` -- per-view normalized residual over sampler steps
-
-**4-view set (20 subjects)**
-
-- `figures/mvp/reconstruction_montage_quad.png` -- the budget question: 4xR=4 duplicated vs complementary vs one full scan
-- `figures/mvp/error_maps_quad.png` -- per-method absolute error, 4-view set
-- `figures/mvp/metric_boxplots_quad.png` -- subject-level metrics, 4-view set
-- `figures/mvp/fixed_vs_extra_budget_quad.png` -- metric vs acquired coefficients, 4-view set
-
-**Uncertainty and tuning**
-
+- `figures/mvp/mask_design_all.png` -- all mask conditions: per-view masks, union coverage, and lines-bought vs unique-lines efficiency
 - `figures/mvp/lss_tier_tuning.png` -- per-coverage-tier l_ss retune on validation -- l_ss=30 is optimal at every tier, so the full_diffusion<full_plain gap is not a tuning artefact
-- `figures/mvp/uncertainty_examples.png` -- per-pixel posterior std over seeds
-- `figures/mvp/uncertainty_calibration.png` -- |error| vs predicted std
-- `figures/mvp/validation_grid.png` -- original global l_ss / num_steps / likelihood tuning on validation
+
+**Supporting — per-method absolute error maps**
+
+- `figures/mvp/error_maps.png` -- 2-view set: per-method |recon - reference|
+- `figures/mvp/error_maps_quad.png` -- 4-view set: per-method |recon - reference|
 
 ## Limitations and negative findings
 

@@ -1,173 +1,236 @@
-## Ambient Diffusion Posterior Sampling | ICLR 2025
+# Cross-View Ambient Diffusion for Multi-Acquisition Low-Field MRI (MVP)
 
-This repository hosts the official source code for the paper: [Ambient Diffusion Posterior Sampling: Solving Inverse Problems with Diffusion Models trained on Corrupted Data](https://openreview.net/forum?id=qeXcMutEZY).
+A seminar MVP built on the [Ambient Diffusion Posterior Sampling for MRI](https://github.com/utcsilab/ambient-diffusion-mri)
+repository. It studies whether a learned diffusion prior plus **multiple cheap
+acquisitions** can improve low-field reconstruction on **M4Raw 0.3 T** T2-weighted
+brain data, and — more importantly — asks how much the **acquisition design**
+(which k-space lines the repeated scans measure) matters versus the reconstruction
+method.
 
+**The headline finding:** acquisition design dominates reconstruction method by
+5–10×, and the honest low-field ceiling is classical multi-average (NEX), not the
+learned prior. See [`reports/mvp_summary.md`](reports/mvp_summary.md) for the full
+write-up and [`reports/mvp_notes.md`](reports/mvp_notes.md) for the decision log
+(including four bugs that changed conclusions).
 
-Authored by: Asad Aali, Giannis Daras, Brett Levac, Sidharth Kumar, Alexandros G. Dimakis, Jonathan I. Tamir
+> This README is the MVP submission guide. The original upstream README is kept as
+> [`README_upstream.md`](README_upstream.md).
 
-<center><img src="https://github.com/asad-aali/ambient-diffusion-mri/blob/main/docs/all_priors.png" width="1024"></center>
+---
 
-<u> Figure </u>: *Prior samples from Ambient Diffusion trained with under-sampled data at R = 2, 4, 6, 8 (columns 1 - 4), EDM trained with L1-wavelet reconstructions of subsampled data at R = 2, 4, 6, 8 (columns 5 - 8), NCSNV2 trained with fully sampled data (column 9) and EDM trained with fully sampled data  (column 10)*
+## Main results (start here)
 
-## Abstract
-*We provide a framework for solving inverse problems with diffusion models learned from linearly corrupted data. Our method, Ambient Diffusion Posterior Sampling (A-DPS), leverages a generative model pre-trained on one type of corruption (e.g. image inpainting) to perform posterior sampling conditioned on measurements from a potentially different forward process (e.g. image blurring). We test the efficacy of our approach on standard natural image datasets (CelebA, FFHQ, and AFHQ) and we show that A-DPS can sometimes outperform models trained on clean data for several image restoration tasks in both speed and performance. We further extend the Ambient Diffusion framework to train MRI models with access only to Fourier subsampled multi-coil MRI measurements at various acceleration factors (R = 2, 4, 6, 8). We again observe that models trained on highly subsampled data are better priors for solving inverse problems in the high acceleration regime than models trained on fully sampled data.*
+| Deliverable | File |
+|---|---|
+| **Results tables** (SSIM / NRMSE / held-out k-error, per method, both sets) | [`reports/mvp_summary.md`](reports/mvp_summary.md) |
+| Results tables, standalone (Markdown + CSV) | `tables/mvp/results_tables.md`, `tables/mvp/results_*.csv` |
+| **Reconstruction montages** — the reconstructed images per results table | `figures/mvp/recon_montage_2view.png`, `figures/mvp/recon_montage_4view.png` |
+| Results tables visualised (bars ± 95% CI) | `figures/mvp/results_2view.png`, `figures/mvp/results_4view.png` |
+| Cross-experiment conclusions | `figures/mvp/experiment_overview.png`, `effect_sizes_forest.png`, `budget_ladder.png`, `finetuning_vs_coverage.png` |
+| Mask designs / l_ss tuning | `figures/mvp/mask_design_all.png`, `lss_tier_tuning.png` |
 
-## Installation
-The recommended way to run the code is with an Anaconda/Miniconda environment.
-First, clone the repository: 
+If you only want to regenerate the tables and figures from the reconstructions that
+are already on disk, jump to [Regenerate tables & figures only](#regenerate-tables--figures-only).
 
-`git clone https://github.com/utcsilab/ambient-diffusion-mri.git`.
+---
 
-Then, create a new Anaconda environment and install the dependencies:
+## The experiment grid
 
-`conda env create -f environment.yml -n ambient`
+All methods are defined in one place — [`analysis/experiments.py`](analysis/experiments.py).
+Each is a combination of **acquisition design** × **reconstruction method**, evaluated
+on two sets: the **2-view set** (25 subjects, 75 slices) and the **4-view set**
+(20 subjects, 59 slices — only slices with 4 motion-consistent M4Raw test repetitions).
 
-You will also need to have `diffusers` installed from the source. To do so, run:
+| slug family | acquisition | combiner variants |
+|---|---|---|
+| `classical_{adjoint,l1wav}` | fixed budget (2×R=8) | classical (no prior) |
+| `single_r4` | one cheap R=4 scan | diffusion |
+| `fixed_split_{merge,ft}` | fixed budget (2×R=8, split one scan) | analytic merge / cross-view FT |
+| `dup2_{merge,ft}`, `dup4_{merge,ft}` | 2× / 4× **duplicated** mask (25% cov) | merge / FT |
+| `comp2_{merge,ft}`, `comp4_{merge,ft}` | 2× / 4× **complementary**, shared ACS (44% / 81% cov) | merge / FT |
+| `fcomp2_{merge,ft}`, `fcomp4_{merge,ft}` | 2× / 4× **fully-complementary**, split ACS (50% / 100% cov) | merge / FT |
+| `full_{plain,diffusion}` | one complete measurement (R=1) | plain / diffusion |
+| `dualfull_{merge,ft}` | **two** complete measurements (NEX=2) | classical average / cross-view FT |
 
-`pip install git+https://github.com/huggingface/diffusers.git`
+`merge` = analytic noise-weighted k-space merge then diffusion; `ft` = cross-view
+fine-tuned prior with the joint multi-view likelihood; `plain` = direct SENSE recon.
 
-### Download pre-trained models
+---
 
-From our experiments, we share nine (9) pre-trained models:
-1. A supervised EDM model trained on fully sampled (R = 1) FastMRI data.
-2. Four Ambient Diffusion models trained on undersampled FastMRI data at acceleration rates of R = 2, 4, 6, 8. 
-3. Four EDM models trained after L1-Wavelet compressed sensing reconstruction of the training set at acceleration rates of R = 2, 4, 6, 8.
+## Setup
 
-The checkpoints are available [here](https://utexas.box.com/s/axofnwib9kukdpa92ge4ays87dmuvpf7). To download from the terminal, simply run:
+```bash
+# 1. environment (Miniconda). The env used here is `ambient-mv`:
+conda env create -f environment.yml            # or: conda create -n ambient-mv python=3.9 && pip install ...
+conda activate ambient-mv
 
-`wget -v -O ambient_models.zip -L https://utexas.box.com/shared/static/axofnwib9kukdpa92ge4ays87dmuvpf7.zip`
-
-### Download dataset
-
-For the experiments, we used a pre-processed version of NYU's [FastMRI dataset](https://fastmri.med.nyu.edu/). 
-
-To set up the dataset for training/inference, follow the instructions provided [here](https://github.com/NVlabs/edm#preparing-datasets).
-
-## Training New Models
-
-To train a new Ambient Diffusion model on the FastMRI dataset, run the following bash script: 
-
-`ambient-diffusion-mri/train.sh`
-
-```
-R=4
-EXPERIMENT_NAME=brainMRI_R=$R
-GPUS_PER_NODE=1
-GPU=0
-DATA_PATH=/path_to_dataset/numpy/ksp_brainMRI_384.zip
-OUTDIR=/path_to_output/models/$EXPERIMENT_NAME
-CORR=$R
-DELTA=5
-BATCH=8
-METHOD=ambient
-
-torchrun --standalone --nproc_per_node=$GPUS_PER_NODE \
-    train.py --gpu=$GPU --outdir=$OUTDIR --experiment_name=$EXPERIMENT_NAME \
-    --dump=200 --cond=0 --arch=ddpmpp \
-    --precond=$METHOD --cres=1,1,1,1 --lr=2e-4 --dropout=0.1 --augment=0 \
-    --data=$DATA_PATH --norm=2 --max_grad_norm=1.0 --mask_full_rgb=True \
-    --corruption_probability=$CORR --delta_probability=$DELTA --batch=$BATCH \
-    --normalize=False --fp16=True --wandb_id=$EXPERIMENT_NAME
-```
-
-## Sampling
-
-### Generate images from trained model
-
-To generate images from the trained model, run the following bash script: 
-
-`ambient-diffusion-mri/prior.sh`:
-
-```
-R=4
-EXPERIMENT_NAME=brainMRI_prior_R=$R
-GPUS_PER_NODE=1
-GPU=0
-MODEL_PATH=/path_to_model/models/brainMRI_R=$R
-MAPS_PATH=/path_to_dataset/numpy/ksp_brainMRI_384.zip
-SEEDS=1000
-BATCH=8
-
-torchrun --standalone --nproc_per_node=$GPUS_PER_NODE \
-    prior.py --gpu=$GPU --network=$MODEL_PATH/  --maps_path=$MAPS_PATH\
-    --outdir=results/$EXPERIMENT_NAME \
-    --experiment_name=$EXPERIMENT_NAME \
-    --ref=$MODEL_PATH/stats.jsonl \
-    --seeds=$SEEDS --batch=$BATCH \
-    --mask_full_rgb=True --num_masks=1 --guidance_scale=0.0 \
-    --training_options_loc=$MODEL_PATH/training_options.json \
-    --num=$SEEDS --img_channels=2 --with_wandb=False
+# 2. paths — edit and source .env.mvp (defines PROJECT_ROOT, DATA_ROOT, RUN_ROOT,
+#    MODEL_ROOT, AMBIENT_R4_DIR, MVP_GPUS). Every script below reads these.
+source ../.env.mvp        # adjust the path to wherever you keep .env.mvp
 ```
 
-This will generate 1000 images in the folder `<results/$EXPERIMENT_NAME>`.
+**Prerequisites**
+- **Data:** M4Raw (`train` / `val` / `test` multicoil H5) under `$DATA_ROOT/raw/`.
+- **Prior checkpoint:** the published Ambient R=4 model at `$AMBIENT_R4_DIR`
+  (`network-snapshot.pkl` + `training_options.json`).
+- **GPUs:** two are enough (`MVP_GPUS=2,3`); 11 GB each. Inference runs fp16.
 
-### Posterior sampling using Ambient Diffusion Posterior Sampling (A-DPS)
+---
 
-To generate posterior samples given a trained model, run the following bash script: 
+## Full reproduction pipeline
 
-`ambient-diffusion-mri/solve_inverse_adps.sh`:
+Every stage writes into `$DATA_ROOT/processed`, `$RUN_ROOT`, `tables/mvp`, and
+`figures/mvp`. Stages are ordered; later stages consume earlier outputs.
 
-```
-TRAINING_R=4
-EXPERIMENT_NAME=brainMRI_ambientDPS
-GPUS_PER_NODE=1
-GPU=0
-MODEL_PATH=/path_to_model/models/brainMRI_R=$TRAINING_R
-MEAS_PATH=/path_to_measurements
-STEPS=500
-METHOD=ambient
+### 1. Preprocess M4Raw into multi-view samples
 
-for seed in 15
-do
-    for R in 2 4 6 8
-    do
-        for sample in {0..100}
-        do
-            torchrun --standalone --nproc_per_node=$GPUS_PER_NODE \
-            solve_inverse_adps.py --seed $seed --latent_seeds $seed --gpu $GPU \
-            --sample $sample --inference_R $R --training_R $TRAINING_R \
-            --l_ss 1 --num_steps $STEPS --S_churn 0 \
-            --measurements_path $MEAS_PATH --network $MODEL_PATH \
-            --outdir results/$EXPERIMENT_NAME --img_channels 2 --method $METHOD
-        done
-    done
-done
+Screens repetitions for motion, estimates per-view noise, computes shared ESPIRiT
+maps, and stores a multi-rep-average reference. Run once per view count.
+
+```bash
+# 2-view set (num_views=2, from configs/mvp/data_m4raw_t2.yaml)
+python tools/prepare_m4raw_multiview.py --config configs/mvp/data_m4raw_t2.yaml \
+  --train-root "$DATA_ROOT/raw/train/multicoil_train" \
+  --val-root   "$DATA_ROOT/raw/val/multicoil_val" \
+  --test-root  "$DATA_ROOT/raw/test/multicoil_test" \
+  --output-root "$DATA_ROOT/processed/mvp_t2"
+
+# 4-view set (num_views=4; test only has enough repetitions — M4Raw test = 6 reps)
+python tools/prepare_m4raw_multiview.py --config configs/mvp/data_m4raw_t2_quad.yaml \
+  --test-root "$DATA_ROOT/raw/test/multicoil_test" \
+  --output-root "$DATA_ROOT/processed/mvp_t2_quad"
 ```
 
-### Posterior sampling using Ambient One-Step (A-OS)
+### 2. Generate the experiment masks
 
-To generate posterior samples given a trained model, run the following bash script: 
+Deterministic per-subject/slice masks for every acquisition condition (adds no RNG
+draws for later conditions, so re-running never perturbs earlier ones).
 
-`ambient-diffusion-mri/solve_inverse_1step.sh`:
+```bash
+python tools/generate_mvp_masks.py --config configs/mvp/masks.yaml \
+  --data-root "$DATA_ROOT/processed/mvp_t2"      --output-root "$DATA_ROOT/processed/mvp_t2_masks"
+python tools/generate_mvp_masks.py --config configs/mvp/masks.yaml \
+  --data-root "$DATA_ROOT/processed/mvp_t2_quad" --output-root "$DATA_ROOT/processed/mvp_t2_quad_masks"
 
-```
-R=4
-EXPERIMENT_NAME=brainMRI_1step_R=$R
-GPUS_PER_NODE=1
-GPU=0
-MODEL_PATH=/path_to_model/models/brainMRI_R=$R
-MEAS_PATH=/path_to_measurements
-SEEDS=100
-
-torchrun --standalone --nproc_per_node=$GPUS_PER_NODE \
-    solve_inverse_1step.py --gpu=$GPU --network=$MODEL_PATH/ \
-    --outdir=results/$EXPERIMENT_NAME \
-    --experiment_name=$EXPERIMENT_NAME \
-    --ref=$MODEL_PATH/stats.jsonl \
-    --seeds=$SEEDS --batch=1 \
-    --mask_full_rgb=True --training_options_loc=$MODEL_PATH/training_options.json \
-    --measurements_path=$MEAS_PATH --num=2 --img_channels=2 --with_wandb=False
+# evaluation manifests (the central-slice subset the paper scores)
+python tools/make_eval_subset.py --masks-root "$DATA_ROOT/processed/mvp_t2_masks"      --out test_eval_manifest.csv
+python tools/make_eval_subset.py --masks-root "$DATA_ROOT/processed/mvp_t2_quad_masks" --out quad_eval_manifest.csv
 ```
 
-## FID Score Calculation
+### 3. (Optional) Cross-view fine-tuning of the prior
 
-The following script was used for calculating the FID scores: 
+Trains the `*_ft` prior. Skippable — the published R=4 checkpoint is the base, and
+the fine-tuning benefit is small (see the report). Uses `train.py --precond ambient_mv`.
 
-`ambient-diffusion-mri/fid.sh`:
-
-Example:
+```bash
+bash cluster/run_finetune.sh          # 2-GPU torchrun; ~0.02 Mimg, EMA half-life 0.002
+# best checkpoint -> $RUN_ROOT/checkpoints/crossview_t2/best (via tools/select_best_checkpoint.py)
 ```
-python fid.py ref --data=path_to_ref_data --dest=path_to_ref_scores.npz
 
-torchrun --standalone --nproc_per_node=1 fid.py calc --images=path_to_priors --ref=path_to_ref_scores.npz
+### 4. Inference (produces the reconstruction `.pt` files)
+
+```bash
+# 4a. 2-view diffusion methods (sharded over MVP_GPUS) -> $RUN_ROOT/results/final
+bash cluster/run_final_diffusion.sh
+
+# 4b. 4-view diffusion methods -> $RUN_ROOT/results/final_quad
+CONFIG=configs/mvp/selected_inference.yaml
+QMAN="$DATA_ROOT/processed/mvp_t2_quad_masks/quad_eval_manifest.csv"
+python solve_inverse_mv_adps.py --config $CONFIG --manifest "$QMAN" \
+  --methods single_r4,dup4_merge,dup4_ft,comp4_merge,comp4_ft,fcomp4_merge,fcomp4_ft,full_diffusion,dualfull_ft \
+  --output_dir "$RUN_ROOT/results/final_quad"
+
+# 4c. classical baselines (no network): 2-view (adjoint, L1-wavelet) and 4-view (full_plain, NEX=2 avg)
+python analysis/run_classical_recon.py --config configs/mvp/selected_classical.yaml \
+  --manifest "$DATA_ROOT/processed/mvp_t2_masks/test_eval_manifest.csv" \
+  --methods classical_adjoint,classical_l1wav --output_dir "$RUN_ROOT/results/final"
+python analysis/run_classical_recon.py --manifest "$QMAN" \
+  --methods full_plain,dualfull_merge --output_dir "$RUN_ROOT/results/final_quad"
+```
+
+Hyperparameters (`l_ss=30`, `num_steps=100`, DPS; L1-wavelet `lambda=0.03`) were
+tuned on **validation** only — see `tools/tune_inference.py`, `tools/tune_classical.py`,
+and `tools/tune_lss_by_tier.py` (the per-tier l_ss retune, a documented negative result).
+
+### 5. Metrics, tables, figures, report
+
+One command aggregates the reconstructions and produces everything:
+
+```bash
+bash cluster/run_final_analysis.sh
+```
+
+This runs: `compute_metrics.py` → `aggregate_subject_metrics.py` (subject-level
+means + 95 % bootstrap CIs, both sets) → `make_results_tables.py` (standalone
+tables) → the canonical figures → `build_mvp_report.py` (`reports/mvp_summary.md`).
+
+---
+
+## Regenerate tables & figures only
+
+If the reconstruction `.pt` files already exist under `$RUN_ROOT/results/{final,final_quad}`,
+you do **not** need GPUs or re-inference:
+
+```bash
+source ../.env.mvp
+bash cluster/run_final_analysis.sh          # metrics + tables + figures + report
+```
+
+**Just the results tables** (Markdown + CSV, no prose, no figures):
+
+```bash
+python analysis/make_results_tables.py \
+  --summary tables/mvp/summary_metrics.csv \
+  --summary-quad tables/mvp/summary_metrics_quad.csv \
+  --output-dir tables/mvp
+# -> tables/mvp/results_tables.md + results_2view_fixed.csv / results_2view_2x.csv / results_4view.csv
+```
+
+**Just the reconstruction montages** (the main visual result):
+
+```bash
+python analysis/plot_recon_montage_tables.py \
+  --final "$RUN_ROOT/results/final" --final-quad "$RUN_ROOT/results/final_quad" \
+  --output-dir figures/mvp --cases 3
+```
+
+**Just the results-table bar charts:**
+
+```bash
+python analysis/plot_results_tables.py \
+  --summary tables/mvp/summary_metrics.csv \
+  --summary-quad tables/mvp/summary_metrics_quad.csv --output-dir figures/mvp
+```
+
+---
+
+## What is MVP vs upstream
+
+**MVP additions (this work):**
+- `utils/multiview_mri.py` — multi-view MRI operator + noise-weighted merge.
+- `solve_inverse_mv_adps.py` — multi-view Ambient DPS sampler.
+- `training/loss.py::CrossViewAmbientLoss`, `training/dataset.py::MultiViewKspaceDataset` — cross-view fine-tuning.
+- `analysis/` — metrics, experiment registry, table + figure generation, the report builder.
+- `tools/` — preprocessing, mask generation, tuning, manifests.
+- `configs/mvp/`, `cluster/`, `reports/`, `tables/mvp/`, `figures/mvp/`.
+
+**Unchanged upstream** (the diffusion architecture and original single-view sampler
+are byte-for-byte intact): `training/networks.py`, `torch_utils/`, `generate.py`,
+`solve_inverse_adps.py`. The `ambient-diffusion-inverse/` git submodule is the
+original reference code.
+
+---
+
+## Repository map
+
+```
+analysis/         metrics, experiments.py (method registry), plotting, report + tables builders
+tools/            preprocessing, mask generation, tuning, manifests, name migration
+configs/mvp/      data / mask / inference / training / classical configs
+cluster/          run_finetune.sh, run_final_diffusion.sh, run_final_analysis.sh
+utils/            multiview_mri.py, mri_fft.py, checkpoint_arch.py, train_masks.py
+reports/          mvp_summary.md (results), mvp_notes.md (decision log)
+tables/mvp/       metric CSVs + results tables (md/csv)
+figures/mvp/      the canonical figures (montages, results bars, conclusions)
+solve_inverse_mv_adps.py    multi-view inference entry point
 ```
