@@ -3,7 +3,7 @@
 
 Motivation
 ----------
-The MVP used a single l_ss=30 tuned on sparse single_r4 (25% coverage) for every
+This project used a single l_ss=30 tuned on sparse single_r4 (25% coverage) for every
 condition.  The optimal guidance scale depends on how much the data constrains
 the image: sparse data wants the prior to have a strong voice; well-sampled data
 wants guidance turned up so the prior stops injecting plausible-but-wrong texture
@@ -20,8 +20,8 @@ Tiers and representatives (all runnable on the 2-view validation set):
 Selection criterion (matches the original tune): normalized held-out k-space
 error primary, subject-mean SSIM tiebreak, then stability, then runtime.
 
-Writes configs/mvp/l_ss_by_tier.yaml, tables/mvp/lss_tier_grid.csv and
-figures/mvp/lss_tier_tuning.png.
+Writes configs/project/l_ss_by_tier.yaml, tables/project/lss_tier_grid.csv and
+figures/project/lss_tier_tuning.png.
 """
 
 import argparse
@@ -185,13 +185,13 @@ def main():
         print(f"  -> tier '{tier}' selected l_ss={best['l_ss']}", flush=True)
 
     # write grid csv
-    grid_csv = os.path.join(ROOT, "tables", "mvp", f"lss_tier_grid{args.out_tag}.csv")
+    grid_csv = os.path.join(ROOT, "tables", "project", f"lss_tier_grid{args.out_tag}.csv")
     os.makedirs(os.path.dirname(grid_csv), exist_ok=True)
     with open(grid_csv, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
 
     # write selected l_ss per tier
-    out_yaml = os.path.join(ROOT, "configs", "mvp", f"l_ss_by_tier{args.out_tag}.yaml")
+    out_yaml = os.path.join(ROOT, "configs", "project", f"l_ss_by_tier{args.out_tag}.yaml")
     with open(out_yaml, "w") as f:
         yaml.safe_dump({"l_ss_by_tier": selected, "likelihood_type": args.likelihood,
                         "num_steps": args.num_steps,
@@ -218,7 +218,7 @@ def main():
         fig.suptitle(f"Per-tier l_ss tuning on validation (n={len(subset)} subjects, test untouched)",
                      fontweight="bold")
         fig.tight_layout()
-        figp = os.path.join(ROOT, "figures", "mvp", f"lss_tier_tuning{args.out_tag}.png")
+        figp = os.path.join(ROOT, "figures", "project", f"lss_tier_tuning{args.out_tag}.png")
         fig.savefig(figp, dpi=120, bbox_inches="tight")
         print(f"Wrote {figp}")
     except Exception as e:

@@ -5,7 +5,7 @@ These are the figures that carry the study's conclusions, as opposed to the
 per-method montages.  Everything is computed from the per-subject metric tables
 so the plots and the report cannot disagree.
 
-Outputs (figures/mvp/):
+Outputs (figures/project/):
   effect_sizes_forest.png     paired effects, acquisition design vs recon method
   budget_ladder.png           SSIM vs lines bought, duplicated vs complementary
   finetuning_vs_coverage.png  cross-view fine-tuning benefit decaying with coverage

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Generate deterministic experiment masks for the four MVP conditions (Section 10).
+"""Generate deterministic experiment masks for the four experiment conditions (Section 10).
 
 Conditions (Cartesian column undersampling, fully-sampled central ACS):
   single_r4  : view 0 only, one R=4 mask.
@@ -12,7 +12,7 @@ duplicated ACS in both views) equal single_r4 within ``budget_tolerance``.
 
 Masks are deterministic per subject/slice (seed = global seed + subject + slice)
 and never depend on image content.  Writes one mask file per processed sample
-plus a manifest and ``figures/mvp/mask_design.png``.
+plus a manifest and ``figures/project/mask_design.png``.
 """
 
 import argparse
@@ -244,7 +244,7 @@ def main():
 
     # visualization
     fig_path = args.figure or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "figures", "mvp", "mask_design.png")
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "figures", "project", "mask_design.png")
     if example_masks is not None:
         os.makedirs(os.path.dirname(fig_path), exist_ok=True)
         import matplotlib
@@ -262,7 +262,7 @@ def main():
             ax.imshow(m.numpy(), cmap="gray", aspect="auto")
             ax.set_title(title, fontsize=11); ax.set_xlabel("kx (FE)"); ax.set_ylabel("ky (PE)")
         fig.suptitle(
-            f"MVP mask design (subj {meta['subject_id']} sl{meta['slice_id']})  |  "
+            f"Mask design (subj {meta['subject_id']} sl{meta['slice_id']})  |  "
             f"single_r4={counts['single_r4_view0']}  fixed_sum(dupACS)={counts['fixed_sum_dupACS']}  "
             f"fixed_union={counts['fixed_union']}  extra_sum={counts['extra_sum']}", fontsize=11)
         fig.tight_layout()

@@ -2,7 +2,7 @@
 
 This module implements the measurement model described in
 ``MULTIVIEW_ULF_AMBIENT_DIFFUSION_PROJECT.md`` (Section 3 / 6) for the
-seminar MVP.  It is written to be *numerically identical* to the original
+seminar project.  It is written to be *numerically identical* to the original
 single-view ``MRI_utils`` class in ``solve_inverse_adps.py`` when ``V=1`` so
 that Stage-1 multi-view reconstruction reduces exactly to the published
 baseline.

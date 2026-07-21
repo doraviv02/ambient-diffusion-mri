@@ -57,13 +57,13 @@ def main():
 
     best = sorted(rows, key=lambda r: (round(r["heldout_kspace_err"], 4), -round(r["ssim"], 4)))[0]
     out = args.output or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                      "configs", "mvp", "selected_classical.yaml")
+                                      "configs", "project", "selected_classical.yaml")
     with open(out, "w") as f:
         yaml.safe_dump({"lambda": best["lambda"], "iterations": args.iterations,
                         "grid": lam_grid, "selection": "val_heldout_kspace_error"}, f, sort_keys=False)
     # also record the grid table
     tbl = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "tables", "mvp", "classical_lambda_grid.csv")
+                       "tables", "project", "classical_lambda_grid.csv")
     os.makedirs(os.path.dirname(tbl), exist_ok=True)
     with open(tbl, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)

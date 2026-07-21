@@ -103,7 +103,7 @@ def training_loop(
     cudnn_benchmark     = True,     # Enable torch.backends.cudnn.benchmark?
     device              = torch.device('cuda'),
     max_grad_norm       = None,     # gradient clipping.
-    compile_network     = True,     # Use torch.compile (MVP disables it).
+    compile_network     = True,     # Use torch.compile (this project disables it).
     dataset_mode        = None,     # 'image'|'numpy_ambient'|'multiview_kspace'.
     tracking            = 'wandb',  # 'wandb' or 'disabled' (offline cluster jobs).
     transfer_strict     = False,    # Require all trainable tensors on --transfer.

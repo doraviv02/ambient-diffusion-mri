@@ -76,7 +76,7 @@ def parse_int_list(s):
 @click.option('--corruption_pattern', help='Corruption pattern', metavar='dust|box|downscale|fixed_box', default='dust', show_default=True, required=False)
 @click.option('--max_size', help='Limit training samples.', type=int, default=None, show_default=True)
 
-# MVP: cross-view multi-acquisition fine-tuning options.
+# Cross-view multi-acquisition fine-tuning options.
 @click.option('--dataset-mode', 'dataset_mode', help='Dataset class selection', metavar='image|numpy_ambient|multiview_kspace', type=click.Choice(['image', 'numpy_ambient', 'multiview_kspace']), default=None, show_default=True)
 @click.option('--cross-view-weight', 'cross_view_weight', help='Cross-view loss weight', type=float, default=1.0, show_default=True)
 @click.option('--input-heldout-weight', 'input_heldout_weight', help='Input held-out loss weight (beta)', type=float, default=0.1, show_default=True)
@@ -239,7 +239,7 @@ def main(**kwargs):
         c.img_channels_override = 4 if opts.precond in ('ambient', 'ambient_mv') else 2
     c.network_kwargs.update(dropout=opts.dropout, use_fp16=opts.fp16)
 
-    # MVP training-loop controls.
+    # Project training-loop controls.
     c.dataset_mode = dataset_mode
     c.compile_network = bool(opts.compile_network)
     c.tracking = opts.tracking

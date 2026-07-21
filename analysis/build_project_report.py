@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""Assemble reports/mvp_summary.md: dataset/scope, the mask design, and the
+"""Assemble reports/project_summary.md: dataset/scope, the mask design, and the
 results tables. Deliberately terse -- no narrative, no interpretation.
 
 Covers both evaluation sets:
-  * the 2-view set   (tables/mvp/summary_metrics.csv,      25 subjects / 75 slices)
-  * the 4-view set   (tables/mvp/summary_metrics_quad.csv, 20 subjects / 59 slices)
+  * the 2-view set   (tables/project/summary_metrics.csv,      25 subjects / 75 slices)
+  * the 4-view set   (tables/project/summary_metrics_quad.csv, 20 subjects / 59 slices)
 """
 
 import argparse
@@ -89,7 +89,7 @@ def main():
     sel_inf = _load_yaml(args.selected_inference) if args.selected_inference else None
     sel_cls = _load_yaml(args.selected_classical) if args.selected_classical else None
 
-    L = ["# MVP Summary: Cross-View Ambient Diffusion for Multi-Acquisition Low-Field MRI\n"]
+    L = ["# Project Summary: Cross-View Ambient Diffusion for Multi-Acquisition Low-Field MRI\n"]
 
     # ---------------- dataset and scope ----------------
     L.append("## Dataset and scope\n")
@@ -180,7 +180,7 @@ def main():
         L.append(f"**{gname}**\n")
         for fn in items:
             mark = "" if os.path.exists(os.path.join(args.figures, fn)) else "  _(missing)_"
-            L.append(f"- `figures/mvp/{fn}`{mark}")
+            L.append(f"- `figures/project/{fn}`{mark}")
         L.append("")
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)

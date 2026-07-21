@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Reconstruction-image montages grouped to match the results tables.
 
-Columns are exactly the methods of each results table in reports/mvp_summary.md;
+Columns are exactly the methods of each results table in reports/project_summary.md;
 rows are a few example slices (spanning input SNR). Grouped per report section:
   recon_montage_2view.png : the two 2-view tables stacked (fixed budget; 2x budget)
   recon_montage_4view.png : the 4-view table
@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from analysis.plot_common import load_results, recon_mag, get_reference, zero_filled_mag
 from analysis.experiments import EXPERIMENTS, DESIGN_COLORS, design_of
 
-# the results tables, exactly as presented in mvp_summary.md
+# the results tables, exactly as presented in project_summary.md
 T_FIXED = ["classical_adjoint", "classical_l1wav", "single_r4", "fixed_split_merge", "fixed_split_ft"]
 T_2X = ["dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft", "fcomp2_merge", "fcomp2_ft"]
 T_QUAD = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",

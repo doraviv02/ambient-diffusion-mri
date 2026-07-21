@@ -1,6 +1,6 @@
-# Cross-View Ambient Diffusion for Multi-Acquisition Low-Field MRI (MVP)
+# Cross-View Ambient Diffusion for Multi-Acquisition Low-Field MRI
 
-A seminar MVP built on the [Ambient Diffusion Posterior Sampling for MRI](https://github.com/utcsilab/ambient-diffusion-mri)
+A seminar project built on the [Ambient Diffusion Posterior Sampling for MRI](https://github.com/utcsilab/ambient-diffusion-mri)
 repository. It studies whether a learned diffusion prior plus **multiple cheap
 acquisitions** can improve low-field reconstruction on **M4Raw 0.3 T** T2-weighted
 brain data, and — more importantly — asks how much the **acquisition design**
@@ -8,21 +8,21 @@ brain data, and — more importantly — asks how much the **acquisition design*
 method.
 
 
-> This README is the MVP submission guide. The original upstream README is kept as
+> This README is the project submission guide. The original upstream README is kept as
 > [`README_upstream.md`](README_upstream.md).
 
 ---
 
-## Main results (start here)
+## Main results
 
 | Deliverable | File |
 |---|---|
-| **Results tables** (SSIM / NRMSE / held-out k-error, per method, both sets) + dataset & scope | [`reports/mvp_summary.md`](reports/mvp_summary.md) |
-| Results tables, standalone (Markdown + CSV) | `tables/mvp/results_tables.md`, `tables/mvp/results_*.csv` |
-| **Reconstruction montages** — the reconstructed images per results table | `figures/mvp/recon_montage_2view.png`, `figures/mvp/recon_montage_4view.png` |
-| Results tables visualised (bars ± 95% CI) | `figures/mvp/results_2view.png`, `figures/mvp/results_4view.png` |
-| Cross-experiment conclusions | `figures/mvp/effect_sizes_forest.png`, `budget_ladder.png`, `finetuning_vs_coverage.png` |
-| Mask designs / l_ss tuning | `figures/mvp/mask_design_all.png`, `lss_tier_tuning.png` |
+| **Results tables** (SSIM / NRMSE / held-out k-error, per method, both sets) + dataset & scope | [`reports/project_summary.md`](reports/project_summary.md) |
+| Results tables, standalone (Markdown + CSV) | `tables/project/results_tables.md`, `tables/project/results_*.csv` |
+| **Reconstruction montages** — the reconstructed images per results table | `figures/project/recon_montage_2view.png`, `figures/project/recon_montage_4view.png` |
+| Results tables visualised (bars ± 95% CI) | `figures/project/results_2view.png`, `figures/project/results_4view.png` |
+| Cross-experiment conclusions | `figures/project/effect_sizes_forest.png`, `budget_ladder.png`, `finetuning_vs_coverage.png` |
+| Mask designs / l_ss tuning | `figures/project/mask_design_all.png`, `lss_tier_tuning.png` |
 
 If you only want to regenerate the tables and figures from the reconstructions that
 are already on disk, jump to [Regenerate tables & figures only](#regenerate-tables--figures-only).
@@ -52,6 +52,37 @@ fine-tuned prior with the joint multi-view likelihood; `plain` = direct SENSE re
 
 ---
 
+## Data & inputs
+
+**Dataset — M4Raw** (0.3 T, 4-coil, 256×256, multi-repetition brain k-space; this work
+uses the T2-weighted subset). Download V1.6 from Zenodo:
+[doi.org/10.5281/zenodo.8056074](https://doi.org/10.5281/zenodo.8056074) — paper:
+Lyu, Mei, Huang et al., *M4Raw*, Sci Data 10, 264 (2023). Unpack so that:
+
+```
+$DATA_ROOT/raw/train/multicoil_train/*.h5
+$DATA_ROOT/raw/val/multicoil_val/*.h5
+$DATA_ROOT/raw/test/multicoil_test/*.h5     # 6 repetitions per contrast
+```
+
+**Prior checkpoint — Ambient R=4**, published by the upstream authors:
+[utexas.box.com/s/axofnwib9kukdpa92ge4ays87dmuvpf7](https://utexas.box.com/s/axofnwib9kukdpa92ge4ays87dmuvpf7)
+(`wget -v -O ambient_models.zip -L https://utexas.box.com/shared/static/axofnwib9kukdpa92ge4ays87dmuvpf7.zip`).
+Point `$AMBIENT_R4_DIR` at the folder holding `network-snapshot.pkl` + `training_options.json`.
+
+**File types read/written**
+
+| Type | Role |
+|---|---|
+| `.h5` | raw M4Raw multicoil k-space — the only external input |
+| `.pt` | per-slice multi-view samples, masks, and reconstructions (all intermediates) |
+| `.pkl` / `.json` | prior checkpoint weights + its `training_options.json` |
+| `.yaml` | configs under `configs/project/` (data, masks, inference, training) |
+| `.csv` | eval manifests and metric tables under `tables/project/` |
+| `.png` / `.md` | figures and the final report |
+
+---
+
 ## Setup
 
 ```bash
@@ -59,23 +90,23 @@ fine-tuned prior with the joint multi-view likelihood; `plain` = direct SENSE re
 conda env create -f environment.yml            # or: conda create -n ambient-mv python=3.9 && pip install ...
 conda activate ambient-mv
 
-# 2. paths — edit and source .env.mvp (defines PROJECT_ROOT, DATA_ROOT, RUN_ROOT,
-#    MODEL_ROOT, AMBIENT_R4_DIR, MVP_GPUS). Every script below reads these.
-source ../.env.mvp        # adjust the path to wherever you keep .env.mvp
+# 2. paths — copy the template, edit it, source it. It defines PROJECT_ROOT,
+#    DATA_ROOT, RUN_ROOT, MODEL_ROOT, AMBIENT_R4_DIR, PROJECT_GPUS — every script
+#    below reads these, and no path is hard-coded anywhere else.
+cp .env.project.example ../.env.project
+$EDITOR ../.env.project
+source ../.env.project        # adjust the path to wherever you keep .env.project
 ```
 
-**Prerequisites**
-- **Data:** M4Raw (`train` / `val` / `test` multicoil H5) under `$DATA_ROOT/raw/`.
-- **Prior checkpoint:** the published Ambient R=4 model at `$AMBIENT_R4_DIR`
-  (`network-snapshot.pkl` + `training_options.json`).
-- **GPUs:** two are enough (`MVP_GPUS=2,3`); 11 GB each. Inference runs fp16.
+**Also needed**
+- **GPUs:** two are enough (`PROJECT_GPUS=2,3`); 11 GB each. Inference runs fp16.
 
 ---
 
 ## Full reproduction pipeline
 
-Every stage writes into `$DATA_ROOT/processed`, `$RUN_ROOT`, `tables/mvp`, and
-`figures/mvp`. Stages are ordered; later stages consume earlier outputs.
+Every stage writes into `$DATA_ROOT/processed`, `$RUN_ROOT`, `tables/project`, and
+`figures/project`. Stages are ordered; later stages consume earlier outputs.
 
 ### 1. Preprocess M4Raw into multi-view samples
 
@@ -83,17 +114,17 @@ Screens repetitions for motion, estimates per-view noise, computes shared ESPIRi
 maps, and stores a multi-rep-average reference. Run once per view count.
 
 ```bash
-# 2-view set (num_views=2, from configs/mvp/data_m4raw_t2.yaml)
-python tools/prepare_m4raw_multiview.py --config configs/mvp/data_m4raw_t2.yaml \
+# 2-view set (num_views=2, from configs/project/data_m4raw_t2.yaml)
+python tools/prepare_m4raw_multiview.py --config configs/project/data_m4raw_t2.yaml \
   --train-root "$DATA_ROOT/raw/train/multicoil_train" \
   --val-root   "$DATA_ROOT/raw/val/multicoil_val" \
   --test-root  "$DATA_ROOT/raw/test/multicoil_test" \
-  --output-root "$DATA_ROOT/processed/mvp_t2"
+  --output-root "$DATA_ROOT/processed/project_t2"
 
 # 4-view set (num_views=4; test only has enough repetitions — M4Raw test = 6 reps)
-python tools/prepare_m4raw_multiview.py --config configs/mvp/data_m4raw_t2_quad.yaml \
+python tools/prepare_m4raw_multiview.py --config configs/project/data_m4raw_t2_quad.yaml \
   --test-root "$DATA_ROOT/raw/test/multicoil_test" \
-  --output-root "$DATA_ROOT/processed/mvp_t2_quad"
+  --output-root "$DATA_ROOT/processed/project_t2_quad"
 ```
 
 ### 2. Generate the experiment masks
@@ -102,14 +133,14 @@ Deterministic per-subject/slice masks for every acquisition condition (adds no R
 draws for later conditions, so re-running never perturbs earlier ones).
 
 ```bash
-python tools/generate_mvp_masks.py --config configs/mvp/masks.yaml \
-  --data-root "$DATA_ROOT/processed/mvp_t2"      --output-root "$DATA_ROOT/processed/mvp_t2_masks"
-python tools/generate_mvp_masks.py --config configs/mvp/masks.yaml \
-  --data-root "$DATA_ROOT/processed/mvp_t2_quad" --output-root "$DATA_ROOT/processed/mvp_t2_quad_masks"
+python tools/generate_project_masks.py --config configs/project/masks.yaml \
+  --data-root "$DATA_ROOT/processed/project_t2"      --output-root "$DATA_ROOT/processed/project_t2_masks"
+python tools/generate_project_masks.py --config configs/project/masks.yaml \
+  --data-root "$DATA_ROOT/processed/project_t2_quad" --output-root "$DATA_ROOT/processed/project_t2_quad_masks"
 
 # evaluation manifests (the central-slice subset the paper scores)
-python tools/make_eval_subset.py --masks-root "$DATA_ROOT/processed/mvp_t2_masks"      --out test_eval_manifest.csv
-python tools/make_eval_subset.py --masks-root "$DATA_ROOT/processed/mvp_t2_quad_masks" --out quad_eval_manifest.csv
+python tools/make_eval_subset.py --masks-root "$DATA_ROOT/processed/project_t2_masks"      --out test_eval_manifest.csv
+python tools/make_eval_subset.py --masks-root "$DATA_ROOT/processed/project_t2_quad_masks" --out quad_eval_manifest.csv
 ```
 
 ### 3. (Optional) Cross-view fine-tuning of the prior
@@ -125,19 +156,19 @@ bash cluster/run_finetune.sh          # 2-GPU torchrun; ~0.02 Mimg, EMA half-lif
 ### 4. Inference (produces the reconstruction `.pt` files)
 
 ```bash
-# 4a. 2-view diffusion methods (sharded over MVP_GPUS) -> $RUN_ROOT/results/final
+# 4a. 2-view diffusion methods (sharded over PROJECT_GPUS) -> $RUN_ROOT/results/final
 bash cluster/run_final_diffusion.sh
 
 # 4b. 4-view diffusion methods -> $RUN_ROOT/results/final_quad
-CONFIG=configs/mvp/selected_inference.yaml
-QMAN="$DATA_ROOT/processed/mvp_t2_quad_masks/quad_eval_manifest.csv"
+CONFIG=configs/project/selected_inference.yaml
+QMAN="$DATA_ROOT/processed/project_t2_quad_masks/quad_eval_manifest.csv"
 python solve_inverse_mv_adps.py --config $CONFIG --manifest "$QMAN" \
   --methods single_r4,dup4_merge,dup4_ft,comp4_merge,comp4_ft,fcomp4_merge,fcomp4_ft,full_diffusion,dualfull_ft \
   --output_dir "$RUN_ROOT/results/final_quad"
 
 # 4c. classical baselines (no network): 2-view (adjoint, L1-wavelet) and 4-view (full_plain, NEX=2 avg)
-python analysis/run_classical_recon.py --config configs/mvp/selected_classical.yaml \
-  --manifest "$DATA_ROOT/processed/mvp_t2_masks/test_eval_manifest.csv" \
+python analysis/run_classical_recon.py --config configs/project/selected_classical.yaml \
+  --manifest "$DATA_ROOT/processed/project_t2_masks/test_eval_manifest.csv" \
   --methods classical_adjoint,classical_l1wav --output_dir "$RUN_ROOT/results/final"
 python analysis/run_classical_recon.py --manifest "$QMAN" \
   --methods full_plain,dualfull_merge --output_dir "$RUN_ROOT/results/final_quad"
@@ -157,7 +188,7 @@ bash cluster/run_final_analysis.sh
 
 This runs: `compute_metrics.py` → `aggregate_subject_metrics.py` (subject-level
 means + 95 % bootstrap CIs, both sets) → `make_results_tables.py` (standalone
-tables) → the canonical figures → `build_mvp_report.py` (`reports/mvp_summary.md`).
+tables) → the canonical figures → `build_project_report.py` (`reports/project_summary.md`).
 
 ---
 
@@ -167,7 +198,7 @@ If the reconstruction `.pt` files already exist under `$RUN_ROOT/results/{final,
 you do **not** need GPUs or re-inference:
 
 ```bash
-source ../.env.mvp
+source ../.env.project
 bash cluster/run_final_analysis.sh          # metrics + tables + figures + report
 ```
 
@@ -175,10 +206,10 @@ bash cluster/run_final_analysis.sh          # metrics + tables + figures + repor
 
 ```bash
 python analysis/make_results_tables.py \
-  --summary tables/mvp/summary_metrics.csv \
-  --summary-quad tables/mvp/summary_metrics_quad.csv \
-  --output-dir tables/mvp
-# -> tables/mvp/results_tables.md + results_2view_fixed.csv / results_2view_2x.csv / results_4view.csv
+  --summary tables/project/summary_metrics.csv \
+  --summary-quad tables/project/summary_metrics_quad.csv \
+  --output-dir tables/project
+# -> tables/project/results_tables.md + results_2view_fixed.csv / results_2view_2x.csv / results_4view.csv
 ```
 
 **Just the reconstruction montages** (the main visual result):
@@ -186,28 +217,28 @@ python analysis/make_results_tables.py \
 ```bash
 python analysis/plot_recon_montage_tables.py \
   --final "$RUN_ROOT/results/final" --final-quad "$RUN_ROOT/results/final_quad" \
-  --output-dir figures/mvp --cases 3
+  --output-dir figures/project --cases 3
 ```
 
 **Just the results-table bar charts:**
 
 ```bash
 python analysis/plot_results_tables.py \
-  --summary tables/mvp/summary_metrics.csv \
-  --summary-quad tables/mvp/summary_metrics_quad.csv --output-dir figures/mvp
+  --summary tables/project/summary_metrics.csv \
+  --summary-quad tables/project/summary_metrics_quad.csv --output-dir figures/project
 ```
 
 ---
 
-## What is MVP vs upstream
+## Comparing against upstream
 
-**MVP additions (this work):**
+**Project additions (this work):**
 - `utils/multiview_mri.py` — multi-view MRI operator + noise-weighted merge.
 - `solve_inverse_mv_adps.py` — multi-view Ambient DPS sampler.
 - `training/loss.py::CrossViewAmbientLoss`, `training/dataset.py::MultiViewKspaceDataset` — cross-view fine-tuning.
 - `analysis/` — metrics, experiment registry, table + figure generation, the report builder.
 - `tools/` — preprocessing, mask generation, tuning, manifests.
-- `configs/mvp/`, `cluster/`, `reports/`, `tables/mvp/`, `figures/mvp/`.
+- `configs/project/`, `cluster/`, `reports/`, `tables/project/`, `figures/project/`.
 
 **Unchanged upstream** (the diffusion architecture and original single-view sampler
 are byte-for-byte intact): `training/networks.py`, `torch_utils/`, `generate.py`,
@@ -221,11 +252,11 @@ original reference code.
 ```
 analysis/         metrics, experiments.py (method registry), plotting, report + tables builders
 tools/            preprocessing, mask generation, tuning, manifests, name migration
-configs/mvp/      data / mask / inference / training / classical configs
+configs/project/      data / mask / inference / training / classical configs
 cluster/          run_finetune.sh, run_final_diffusion.sh, run_final_analysis.sh
 utils/            multiview_mri.py, mri_fft.py, checkpoint_arch.py, train_masks.py
-reports/          mvp_summary.md (dataset/scope + results tables), mvp_notes.md (config record)
-tables/mvp/       metric CSVs + results tables (md/csv)
-figures/mvp/      the canonical figures (montages, results bars, conclusions)
+reports/          project_summary.md (dataset/scope + results tables), project_notes.md (config record)
+tables/project/       metric CSVs + results tables (md/csv)
+figures/project/      the canonical figures (montages, results bars, conclusions)
 solve_inverse_mv_adps.py    multi-view inference entry point
 ```

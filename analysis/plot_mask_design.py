@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Mask design figure: every condition, its per-view masks and its true coverage.
 
-`tools/generate_mvp_masks.py` draws a 4-panel figure covering only the original
+`tools/generate_project_masks.py` draws a 4-panel figure covering only the original
 runbook conditions.  This one covers all eight, including the complementary
 designs, and reports the *measured* unique-column coverage rather than the
 nominal acceleration -- which is the whole point of the duplicated-vs-

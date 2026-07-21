@@ -2,8 +2,8 @@
   "git_commit": "75feb2fad4b53e48791fcb0257f2e53a25340774",
   "upstream_commit": "75feb2fad4b53e48791fcb0257f2e53a25340774",
   "checkpoint_sha256": "46b0354507351acfde496c4e3961410845031b2d59bc7423e6f2a011440750ca",
-  "dataset_manifest_sha256": "82612fbed10fd4c4f652f0f09a8c6d9da25457b3883bbe8d13c82fd71580e20b",
-  "config": "configs/mvp/selected_inference.yaml",
+  "dataset_manifest_sha256": "0ec1704970079fccb204fe7f09ca69bd6747e33cd5c890de3fd1af980a1d2ee6",
+  "config": "configs/project/selected_inference.yaml",
   "seeds": [
     0
   ],
@@ -19,6 +19,8 @@
   "timestamp": "2026-07-17T13:38:16.221903",
   "status": "complete",
   "component_manifests": [
-    "/home/doraviv/Lowfield_Ambient/runs/mv_ambient_mvp/ambient_r4_checkpoint.sha256"
-  ]
+    "/home/doraviv/Lowfield_Ambient/runs/mv_ambient/ambient_r4_checkpoint.sha256"
+  ],
+  "dataset_manifest_path": "data/m4raw/processed/project_t2_masks/test_manifest.csv",
+  "provenance_note": "Directories renamed post-run (processed/mvp_t2* -> processed/project_t2*, runs/mv_ambient_mvp -> runs/mv_ambient); the manifest's absolute path column was rewritten accordingly and dataset_manifest_sha256 recomputed. Pre-rename sha256: 82612fbed10fd4c4f652f0f09a8c6d9da25457b3883bbe8d13c82fd71580e20b. Numeric results are unchanged and were re-verified by regenerating all metrics/tables."
 }

@@ -2,10 +2,10 @@
 # Two-GPU deterministic sharded multi-view inference (runbook Section 16).
 # Uses GPUs 2,3 on this node. Adjust CONFIG/MANIFEST/METHODS as needed.
 set -euo pipefail
-source "$(dirname "$0")/.env.mvp" 2>/dev/null || true
+source "$(dirname "$0")/.env.project" 2>/dev/null || true
 
-CONFIG=${CONFIG:-configs/mvp/selected_inference.yaml}
-MANIFEST=${MANIFEST:-$DATA_ROOT/processed/mvp_t2_masks/test_manifest.csv}
+CONFIG=${CONFIG:-configs/project/selected_inference.yaml}
+MANIFEST=${MANIFEST:-$DATA_ROOT/processed/project_t2_masks/test_manifest.csv}
 METHODS=${METHODS:-M2,M3,M4,M5,M6}
 OUTDIR=${OUTDIR:-$RUN_ROOT/results/final}
 GPUS=${GPUS:-2,3}

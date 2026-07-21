@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=mv-ambient-mvp
+#SBATCH --job-name=mv-ambient
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
@@ -16,7 +16,7 @@ set -euo pipefail
 # --- site-specific: adapt only conda init + project/log paths + partition/account ---
 source /home/doraviv/miniconda3/etc/profile.d/conda.sh
 conda activate ambient-mv
-source /home/doraviv/Lowfield_Ambient/.env.mvp
+source /home/doraviv/Lowfield_Ambient/.env.project
 
 cd "$PROJECT_ROOT"
 
@@ -28,14 +28,14 @@ export WANDB_MODE=disabled
 CUDA_VISIBLE_DEVICES=2,3 \
 torchrun --standalone --nproc_per_node=2 \
   train.py \
-  --data "$DATA_ROOT/processed/mvp_t2_masks/train" \
+  --data "$DATA_ROOT/processed/project_t2_masks/train" \
   --outdir "$RUN_ROOT/checkpoints/crossview_t2" \
-  --experiment_name mvp_crossview_t2 \
+  --experiment_name crossview_t2 \
   --dataset-mode multiview_kspace \
   --precond ambient_mv \
   --transfer "$AMBIENT_R4_DIR/network-snapshot.pkl" \
   --init-options "$AMBIENT_R4_DIR/training_options.json" \
-  --val-data "$DATA_ROOT/processed/mvp_t2_masks/val" \
+  --val-data "$DATA_ROOT/processed/project_t2_masks/val" \
   --validation-every-kimg 2 \
   --batch 4 \
   --batch-gpu 1 \

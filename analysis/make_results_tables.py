@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """Generate ONLY the results tables (no prose, no figures).
 
-Reproduces exactly the three results tables in reports/mvp_summary.md from the
+Reproduces exactly the three results tables in reports/project_summary.md from the
 summary_metrics CSVs, and writes them as both Markdown and CSV:
 
-  tables/mvp/results_tables.md          all three tables, Markdown
-  tables/mvp/results_2view_fixed.csv    2-view table 1 (classical + fixed budget)
-  tables/mvp/results_2view_2x.csv       2-view table 2 (2x budget)
-  tables/mvp/results_4view.csv          4-view table
+  tables/project/results_tables.md          all three tables, Markdown
+  tables/project/results_2view_fixed.csv    2-view table 1 (classical + fixed budget)
+  tables/project/results_2view_2x.csv       2-view table 2 (2x budget)
+  tables/project/results_4view.csv          4-view table
 
 Numbers come straight from summary_metrics{,_quad}.csv, so these tables and the
 report cannot disagree. Method identity/order/coverage come from
@@ -23,7 +23,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from analysis.experiments import EXPERIMENTS
 
-# the three tables, exactly as presented in mvp_summary.md
+# the three tables, exactly as presented in project_summary.md
 T_FIXED = ["classical_adjoint", "classical_l1wav", "single_r4", "fixed_split_merge", "fixed_split_ft"]
 T_2X = ["dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft", "fcomp2_merge", "fcomp2_ft"]
 T_QUAD = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",
@@ -96,7 +96,7 @@ def main():
     main_s = pd.read_csv(args.summary)
     quad_s = pd.read_csv(args.summary_quad)
 
-    md = ["# MVP results tables (subject mean [95% bootstrap CI])\n",
+    md = ["# Results tables (subject mean [95% bootstrap CI])\n",
           "## 2-view set (25 subjects, 75 slices)\n",
           markdown_table(main_s, T_FIXED, "Classical baselines & fixed budget (64 lines)"),
           markdown_table(main_s, T_2X, "2x budget (128 lines): duplicated vs complementary vs fully-comp"),

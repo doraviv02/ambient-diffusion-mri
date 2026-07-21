@@ -1,9 +1,9 @@
-"""Single source of truth for the MVP experiment grid.
+"""Single source of truth for the project experiment grid.
 
 Every method's identity (which prior, which combiner, which acquisition) and its
 acquisition accounting live here so the report, the tables and the figures cannot
 drift apart.  Coverage numbers are *measured* from the stored mask tensors, not
-design intent -- see `tools/generate_mvp_masks.py`.
+design intent -- see `tools/generate_project_masks.py`.
 
 Naming
 ------

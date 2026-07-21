@@ -1,6 +1,6 @@
-# MVP configuration record
+# Project configuration record
 
-Factual record of the setup behind `reports/mvp_summary.md` (environment, dataset,
+Factual record of the setup behind `reports/project_summary.md` (environment, dataset,
 preprocessing, mask conditions, tuning outcomes). Results tables live in the summary.
 
 ---
@@ -90,8 +90,8 @@ held-out error is undefined at 100% sampling). Validation SSIM:
 | dense (≥80%) | 0.118 | 0.441 | **0.642** | 0.632 | 0.513 | **30** |
 
 `l_ss=30` is optimal at every tier, so no test result changes. The solver supports
-per-tier l_ss (`cfg["l_ss_by_tier"]`, `configs/mvp/l_ss_by_tier.yaml`); it resolves to 30.
-Grid: `tables/mvp/lss_tier_grid.csv`; figure: `figures/mvp/lss_tier_tuning.png`.
+per-tier l_ss (`cfg["l_ss_by_tier"]`, `configs/project/l_ss_by_tier.yaml`); it resolves to 30.
+Grid: `tables/project/lss_tier_grid.csv`; figure: `figures/project/lss_tier_tuning.png`.
 
 ---
 

@@ -12,7 +12,7 @@ prior_delta_prob: 5
 prior_acs_lines: 20
 checkpoints:
   original: /home/doraviv/Lowfield_Ambient/models/ambient_diffusion_mri/ambient_models/ambient/R=4
-  finetuned: /home/doraviv/Lowfield_Ambient/runs/mv_ambient_mvp/checkpoints/crossview_t2/best
+  finetuned: /home/doraviv/Lowfield_Ambient/runs/mv_ambient/checkpoints/crossview_t2/best
 methods:
   M2:
     checkpoint: original

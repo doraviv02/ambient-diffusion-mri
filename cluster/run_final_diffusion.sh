@@ -4,12 +4,12 @@
 set -euo pipefail
 source /home/doraviv/miniconda3/etc/profile.d/conda.sh
 conda activate ambient-mv
-source /home/doraviv/Lowfield_Ambient/.env.mvp
+source /home/doraviv/Lowfield_Ambient/.env.project
 cd "$PROJECT_ROOT"
 
-CONFIG=configs/mvp/selected_inference.yaml
-EVAL_MAN="$DATA_ROOT/processed/mvp_t2_masks/test_eval_manifest.csv"
-UNC_MAN="$DATA_ROOT/processed/mvp_t2_masks/uncertainty_subset.csv"
+CONFIG=configs/project/selected_inference.yaml
+EVAL_MAN="$DATA_ROOT/processed/project_t2_masks/test_eval_manifest.csv"
+UNC_MAN="$DATA_ROOT/processed/project_t2_masks/uncertainty_subset.csv"
 FINAL="$RUN_ROOT/results/final"
 UNC="$RUN_ROOT/results/uncertainty"
 mkdir -p "$FINAL" "$UNC"

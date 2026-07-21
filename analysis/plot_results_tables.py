@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Bar-chart figures for the results tables in reports/mvp_summary.md.
+"""Bar-chart figures for the results tables in reports/project_summary.md.
 
 One grouped figure per report *section* (so the panels match how the tables are
 presented together):
@@ -31,7 +31,7 @@ DESIGN_LABEL = {
     "dualfull": "two complete measurements (NEX=2)",
 }
 
-# The three tables exactly as they appear in mvp_summary.md.
+# The three tables exactly as they appear in project_summary.md.
 T_FIXED = ["classical_adjoint", "classical_l1wav", "single_r4", "fixed_split_merge", "fixed_split_ft"]
 T_2X = ["dup2_merge", "dup2_ft", "comp2_merge", "comp2_ft", "fcomp2_merge", "fcomp2_ft"]
 T_QUAD = ["single_r4", "dup4_merge", "dup4_ft", "comp4_merge", "comp4_ft",

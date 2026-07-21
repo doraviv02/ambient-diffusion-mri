@@ -1,4 +1,4 @@
-"""Shared helpers for the MVP figures."""
+"""Shared helpers for the project figures."""
 
 from __future__ import annotations
 

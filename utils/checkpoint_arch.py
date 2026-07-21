@@ -1,6 +1,6 @@
 """Recreate architecture-critical options from a published ``training_options.json``.
 
-The MVP must *not* build the fine-tuning / inference network from the current
+This project must *not* build the fine-tuning / inference network from the current
 ``train.py`` defaults (the published R=4 model uses ``channel_mult=[1,1,1,1]``,
 ``resample_filter=[1,1]`` etc., which differ from those defaults).  This helper
 reads the checkpoint's ``training_options.json`` and returns the exact
@@ -31,7 +31,7 @@ def interface_kwargs_from_options(opts: Dict[str, Any], img_channels_image: int 
     ds = opts["dataset_kwargs"]
     loss_name = opts.get("loss_kwargs", {}).get("class_name", "")
     is_ambient = "Ambient" in loss_name
-    label_dim = 0  # MVP is unconditional
+    label_dim = 0  # this project is unconditional
     # Honor the training-time overrides when present. This is essential: SongUNet
     # layer names embed the spatial resolution (e.g. "dec.96x96_block0"), so a
     # fine-tuned model trained with img_resolution_override=384 on 256-px data

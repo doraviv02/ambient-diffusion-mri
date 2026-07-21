@@ -7,7 +7,7 @@ chosen (not per-method).  Test subjects are never used here.
 
 The l_ss grid is recentred (log-spaced [3,10,30]) around the validation smoke
 test because the normalized fidelity's effective l_ss is ~10x the runbook
-nominal grid -- documented in reports/mvp_notes.md.
+nominal grid -- documented in reports/project_notes.md.
 """
 
 import argparse
@@ -113,7 +113,7 @@ def main():
 
     # write grid
     grid_csv = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "tables", "mvp", "validation_grid.csv")
+                            "tables", "project", "validation_grid.csv")
     os.makedirs(os.path.dirname(grid_csv), exist_ok=True)
     with open(grid_csv, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
@@ -127,7 +127,7 @@ def main():
     selected["l_ss"] = best["l_ss"]
     selected["likelihood_type"] = best["likelihood"]
     sel_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "configs", "mvp", "selected_inference.yaml")
+                            "configs", "project", "selected_inference.yaml")
     with open(sel_path, "w") as f:
         yaml.safe_dump(selected, f, sort_keys=False)
     print(f"\nSelected: l_ss={best['l_ss']} steps={best['num_steps']} likelihood={best['likelihood']}")
@@ -149,7 +149,7 @@ def main():
         ax.set_title(f"Validation tuning ({args.condition}, n={len(subset)} subjects)")
         ax.legend(fontsize=8)
         figp = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "figures", "mvp", "validation_grid.png")
+                            "figures", "project", "validation_grid.png")
         os.makedirs(os.path.dirname(figp), exist_ok=True)
         fig.tight_layout(); fig.savefig(figp, dpi=120, bbox_inches="tight")
         print(f"Wrote {figp}")

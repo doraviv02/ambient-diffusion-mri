@@ -308,7 +308,7 @@ def main():
     # guidance scale is resolved from its condition's coverage tier; otherwise the
     # single global l_ss is used for every method (original behaviour). An explicit
     # per-method `l_ss` in the config always wins. Tuned on validation only --
-    # see tools/tune_lss_by_tier.py and reports/mvp_notes.md.
+    # see tools/tune_lss_by_tier.py and reports/project_notes.md.
     l_ss_by_tier = cfg.get("l_ss_by_tier") or {}
 
     def tier_of(cond):
