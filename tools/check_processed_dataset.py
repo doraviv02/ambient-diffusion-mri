@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Validate the processed multi-view dataset (runbook Section 9 checker).
+"""Validate the processed multi-view dataset.
 
 Fails (non-zero exit) on: NaN/Inf tensors, inconsistent view shapes, empty
 masks, non-positive noise, subject overlap across splits, fewer than two views,
@@ -8,7 +8,7 @@ invalid sensitivity-map normalization, or missing metadata.
 Also runs the empirical FFT-convention self-consistency check: the plain-FFT
 adjoint of the ``fftmod``-ed fully-sampled k-space (with ``fftmod``-ed maps)
 must reconstruct the RSS reference magnitude (high correlation).  This is the
-Stage-0 convention gate for the M4Raw path.
+convention gate for the M4Raw path.
 """
 
 import argparse

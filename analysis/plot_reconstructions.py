@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Reconstruction montage + error maps (runbook Section 17.3)."""
+"""Reconstruction montage + error maps."""
 
 import argparse
 import os

@@ -15,7 +15,7 @@ method.
 
 ## Main results
 
-| Deliverable | File |
+| Output | File |
 |---|---|
 | **Results tables** (SSIM / NRMSE / held-out k-error, per method, both sets) + dataset & scope | [`reports/project_summary.md`](reports/project_summary.md) |
 | Results tables, standalone (Markdown + CSV) | `tables/project/results_tables.md`, `tables/project/results_*.csv` |

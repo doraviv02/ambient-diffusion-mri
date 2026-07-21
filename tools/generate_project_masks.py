@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Generate deterministic experiment masks for the four experiment conditions (Section 10).
+"""Generate deterministic experiment masks for the four experiment conditions.
 
 Conditions (Cartesian column undersampling, fully-sampled central ACS):
   single_r4  : view 0 only, one R=4 mask.
@@ -95,8 +95,8 @@ def build_conditions(H, W, cfg, rng):
 
     # --- COMPLEMENTARY extra-repetition designs -------------------------------
     # Separate scans should measure *different* lines. `*_extra`/`*_quad` above
-    # duplicate one mask (the runbook's Condition D: "an additional full
-    # repetition"), which re-buys the same 64 columns and caps coverage at 25%.
+    # duplicate one mask -- simply buying an additional full repetition --
+    # which re-buys the same 64 columns and caps coverage at 25%.
     # The complementary variants share only the ACS (averaged -> sigma/sqrt(V)
     # where the signal energy is) and partition the outer lines disjointly, so
     # coverage grows with the number of scans at the *same* budget.

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-"""Tune the L1-wavelet SENSE lambda on the validation subset (runbook Section 14).
+"""Tune the L1-wavelet SENSE lambda on the validation subset.
 
 Selection: validation held-out k-space error, SSIM as tie-breaker.  Because
-SigPy's regularization is scaled differently from the runbook's nominal grid, a
-wider log-spaced grid is used and the final grid is recorded.
+SigPy's regularization is scaled differently from the nominal grid, a wider
+log-spaced grid is used and the final grid is recorded.
 """
 
 import argparse

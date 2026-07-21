@@ -203,7 +203,7 @@ class AmbientVPLoss:
 
 
 #----------------------------------------------------------------------------
-# Cross-view Ambient loss for multi-acquisition low-field MRI (project doc 8.3).
+# Cross-view Ambient loss for multi-acquisition low-field MRI.
 # One noisy repetition builds the (further-corrupted) denoiser input; a second,
 # independent repetition supervises the prediction in measurement space.  No
 # clean/high-field target is used.

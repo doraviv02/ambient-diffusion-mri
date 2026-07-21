@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Inspect the raw M4Raw dataset before writing the converter (runbook Section 7).
+"""Inspect the raw M4Raw dataset before writing the converter.
 
 Enumerates all H5 files under the train/val/test roots, reads their keys,
 k-space shape/dtype, ``reconstruction_rss`` shape, and the ISMRMRD header, then

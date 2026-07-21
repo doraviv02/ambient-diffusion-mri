@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Write a reproducibility manifest (runbook Section 20)."""
+"""Write a reproducibility manifest for a completed run."""
 
 import argparse
 import datetime

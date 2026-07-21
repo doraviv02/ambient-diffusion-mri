@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-"""Tune multi-view A-DPS on a fixed validation subset (runbook Section 14).
+"""Tune multi-view A-DPS on a fixed validation subset.
 
 Selection criteria (in order): normalized held-out k-space error, subject-mean
 SSIM, stability (no divergence), runtime.  A single global configuration is
 chosen (not per-method).  Test subjects are never used here.
 
 The l_ss grid is recentred (log-spaced [3,10,30]) around the validation smoke
-test because the normalized fidelity's effective l_ss is ~10x the runbook
-nominal grid -- documented in reports/project_notes.md.
+test because the normalized fidelity's effective l_ss is ~10x the nominal
+grid -- documented in reports/project_notes.md.
 """
 
 import argparse

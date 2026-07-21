@@ -1,4 +1,4 @@
-# Cross-view fine-tuning configuration (runbook Section 15).
+# Cross-view fine-tuning configuration.
 checkpoint_init: ${AMBIENT_R4_DIR}/network-snapshot.pkl
 checkpoint_options: ${AMBIENT_R4_DIR}/training_options.json
 dataset_mode: multiview_kspace

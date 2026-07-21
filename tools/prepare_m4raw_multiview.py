@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""M4Raw multi-view preprocessing pipeline (runbook Section 9).
+"""M4Raw multi-view preprocessing pipeline.
 
 Produces one ``.pt`` per accepted T2 slice with two motion-screened,
 phase-aligned repetitions as views, one shared ESPIRiT sensitivity-map set,

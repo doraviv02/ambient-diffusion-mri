@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Multi-view Ambient Diffusion Posterior Sampling for low-field MRI (Stage 1).
+"""Multi-view Ambient Diffusion Posterior Sampling for low-field MRI.
 
 Keeps the pretrained Ambient denoiser unchanged and introduces multi-view
 information through a normalized, noise-weighted multi-view likelihood

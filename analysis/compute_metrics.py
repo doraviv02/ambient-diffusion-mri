@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Flatten per-reconstruction result files into a per-slice metrics CSV (Section 17.1).
+"""Flatten per-reconstruction result files into a per-slice metrics CSV.
 
 Each result .pt (from solve_inverse_mv_adps.py or run_classical_recon.py) already
 carries a uniformly computed ``metrics`` dict (NRMSE, PSNR, SSIM, measured &
@@ -63,7 +63,7 @@ def main():
         d = torch.load(path, map_location="cpu", weights_only=False)
         m = dict(d.get("metrics", {}))
         # Recompute image metrics with a brain mask derived from the reference
-        # (runbook 17.1). The mask is cached per (subject, slice) so every method
+        # The mask is cached per (subject, slice) so every method
         # on a given slice is scored with the identical mask. k-space errors are
         # mask-independent and are reused from the stored metrics.
         ref = d.get("reference")

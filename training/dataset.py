@@ -392,7 +392,7 @@ class NumpyFolderDataset(Dataset):
 
 
 #----------------------------------------------------------------------------
-# Multi-view k-space dataset for cross-view Ambient fine-tuning (project doc 8.2).
+# Multi-view k-space dataset for cross-view Ambient fine-tuning.
 # Returns a dict; two independent repetitions of the same slice serve as input
 # and target views, with fresh random undersampling masks per access.
 

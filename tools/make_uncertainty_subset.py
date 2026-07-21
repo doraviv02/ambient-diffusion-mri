@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""Select the uncertainty subset (runbook Section 16): 10 test subjects, one
-central slice each, chosen deterministically BEFORE inspecting method outcomes."""
+"""Select the uncertainty subset: 10 test subjects, one central slice each,
+chosen deterministically BEFORE inspecting method outcomes."""
 
 import argparse
 import csv

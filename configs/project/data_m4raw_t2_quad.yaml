@@ -1,4 +1,4 @@
-# M4Raw T2 multi-view preprocessing config (runbook Section 9.1).
+# M4Raw T2 multi-view preprocessing config.
 contrast: T2
 num_views: 4
 slice_policy: central_12          # keep the central 12 of 18 slices

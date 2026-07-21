@@ -1,11 +1,8 @@
 """Multi-view MRI forward operator and noise-weighted data fidelity.
 
-This module implements the measurement model described in
-``MULTIVIEW_ULF_AMBIENT_DIFFUSION_PROJECT.md`` (Section 3 / 6) for the
-seminar project.  It is written to be *numerically identical* to the original
-single-view ``MRI_utils`` class in ``solve_inverse_adps.py`` when ``V=1`` so
-that Stage-1 multi-view reconstruction reduces exactly to the published
-baseline.
+Numerically identical to the original single-view ``MRI_utils`` class in
+``solve_inverse_adps.py`` when ``V=1``, so multi-view reconstruction reduces
+exactly to the published baseline.
 
 Conventions (must match the pretrained Ambient checkpoint / the repo):
 
@@ -125,7 +122,7 @@ class MRIViewOperator:
 class MultiViewMRI:
     r"""Joint multi-view MRI operator and normalized data fidelity.
 
-    The data fidelity implements (project doc Section 6.3):
+    The data fidelity is
 
     .. math::
         \mathcal{D}(x) = \frac{1}{V}\sum_{v=1}^V

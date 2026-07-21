@@ -1,5 +1,5 @@
 #!/bin/bash
-# Two-GPU deterministic sharded multi-view inference (runbook Section 16).
+# Two-GPU deterministic sharded multi-view inference.
 # Uses GPUs 2,3 on this node. Adjust CONFIG/MANIFEST/METHODS as needed.
 set -euo pipefail
 source "$(dirname "$0")/.env.project" 2>/dev/null || true

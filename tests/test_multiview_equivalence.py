@@ -1,4 +1,4 @@
-"""Equivalence tests for the multi-view MRI operator (project doc Section 6.5).
+"""Equivalence tests for the multi-view MRI operator.
 
 These tests decide whether the multi-view code is a correct generalization of
 the published single-view baseline, and which multi-view settings are merely

@@ -24,7 +24,7 @@ def fftmod(x):
 
 
 def compute_image_metrics(recon_mag, ref_mag, brain_mask=None):
-    """Image metrics, restricted to a brain mask when given (runbook 17.1).
+    """Image metrics, restricted to a brain mask when given.
 
     At 0.3 T the air background is pure noise in the reconstruction but is
     averaged-down in the multi-repetition reference, so full-FOV SSIM is

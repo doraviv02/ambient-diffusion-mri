@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Classical reconstruction baselines (runbook M0 / M1).
+"""Classical reconstruction baselines.
 
 M0: noise-weighted adjoint (zero-filled SENSE) of the merged fixed-budget data.
 M1: multi-coil L1-wavelet SENSE (SigPy) of the same merged measurement.

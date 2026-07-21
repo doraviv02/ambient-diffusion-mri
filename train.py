@@ -226,7 +226,7 @@ def main(**kwargs):
         c.network_kwargs.augment_dim = 9
 
     # Recreate architecture-critical options from the published checkpoint's
-    # training_options.json (do NOT rely on train.py defaults, project doc S4).
+    # training_options.json (do NOT rely on train.py defaults).
     c.img_channels_override = None
     c.img_resolution_override = None
     if opts.init_options is not None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Subject-level aggregation with bootstrap CIs (runbook Section 17.2).
+"""Subject-level aggregation with bootstrap CIs.
 
 Slices are first averaged within subject; subjects are the resampling units for
 the 95% bootstrap confidence interval.  Slices are never treated as independent.
